@@ -1,82 +1,26 @@
 <!DOCTYPE html>
+
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#6366f1" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="RestoKu" />
-  <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="icon.png" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#6366f1"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="RestoKu"/>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="apple-touch-icon" href="icon.png"/>
   <title>RestoKu</title>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
-    :root {
-      --bg: #f5f6fa;
-      --surface: #ffffff;
-      --surface2: #f0f1f7;
-      --border: #e4e6ef;
-      --border2: #d0d3e8;
-      --text: #1a1d2e;
-      --text2: #4b5280;
-      --text3: #8b90b0;
-      --accent: #6366f1;
-      --accent-light: #eef0ff;
-      --accent-dark: #4f51c8;
-      --green: #10b981;
-      --green-light: #ecfdf5;
-      --green-dark: #065f46;
-      --amber: #f59e0b;
-      --amber-light: #fffbeb;
-      --amber-dark: #92400e;
-      --red: #ef4444;
-      --red-light: #fef2f2;
-      --red-dark: #991b1b;
-      --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
-      --shadow: 0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
-      --shadow-lg: 0 8px 24px rgba(0,0,0,.1), 0 4px 8px rgba(0,0,0,.06);
-      --radius: 16px;
-      --radius-sm: 10px;
-      --radius-xs: 8px;
-      --nav-h: 72px;
-    }
-
-    html, body { height: 100%; }
-    body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      overscroll-behavior: none;
-      -webkit-font-smoothing: antialiased;
-    }
-    input, select, button, textarea { font-family: inherit; }
-    input[type=number]::-webkit-inner-spin-button,
-    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
-
-    /* Landscape helper */
-    @media (orientation: landscape) and (max-height: 500px) {
-      :root { --nav-h: 56px; }
-    }
-
-    /* Desktop */
-    @media (min-width: 768px) {
-      :root { --nav-h: 0px; }
-    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    body{background:#0f0f14;overscroll-behavior:none;}
+    input,select,button{font-family:inherit;}
+    input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
+    input[type=date],input[type=month]{color-scheme:dark;}
   </style>
   <script>
-    const _origWarn = console.warn.bind(console);
-    console.warn = (...args) => {
-      if (typeof args[0] === 'string' && args[0].includes('Babel transformer')) return;
-      _origWarn(...args);
-    };
+    const _w=console.warn.bind(console);
+    console.warn=(...a)=>{if(typeof a[0]==='string'&&a[0].includes('Babel transformer'))return;_w(...a);};
   </script>
 </head>
 <body>
@@ -85,1115 +29,1345 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
   <script type="text/babel" data-presets="react">
-    const { useState, useEffect, useCallback, useRef } = React;
+    const {useState,useEffect,useCallback,useRef}=React;
 
-    // ─── STORAGE ─────────────────────────────────────────────────────────────────
-    function useLocalStorage(key, initialValue) {
-      const [storedValue, setStoredValue] = useState(() => {
-        try {
-          const item = window.localStorage.getItem(key);
-          return item ? JSON.parse(item) : initialValue;
-        } catch { return initialValue; }
-      });
-      const setValue = (value) => {
-        try {
-          const v = value instanceof Function ? value(storedValue) : value;
-          setStoredValue(v);
-          window.localStorage.setItem(key, JSON.stringify(v));
-        } catch (err) { console.warn("localStorage error:", err); }
-      };
-      return [storedValue, setValue];
-    }
+// ─── PERSISTENT STORAGE ───────────────────────────────────────────────────────
+function useLocalStorage(key, initialValue) {
+const [storedValue, setStoredValue] = useState(() => {
+try { const item = window.localStorage.getItem(key); return item ? JSON.parse(item) : initialValue; } catch { return initialValue; }
+});
+const setValue = (value) => {
+try {
+const v = value instanceof Function ? value(storedValue) : value;
+setStoredValue(v);
+window.localStorage.setItem(key, JSON.stringify(v));
+} catch (err) { console.warn(“localStorage error:”, err); }
+};
+return [storedValue, setValue];
+}
 
-    function clearAllData() {
-      ["restoku_menus", "restoku_stok", "restoku_transaksi"].forEach(k => window.localStorage.removeItem(k));
-      window.location.reload();
-    }
+function clearAllData() {
+[“restoku_menus”,“restoku_stok”,“restoku_transaksi”,“restoku_perlengkapan”,“restoku_biaya_ops”,“restoku_paket”].forEach(k => window.localStorage.removeItem(k));
+window.location.reload();
+}
 
-    // ─── SEED DATA ────────────────────────────────────────────────────────────────
-    const SEED_MENUS = [
-      { id: "m1", nama: "Ayam Geprek", kategori: "Makanan", harga_jual: 18000,
-        biaya_tambahan: { listrik: 500, gas: 300, air: 100, labor: 2000 },
-        bahan: [{ bahan_id: "b1", nama: "Ayam", qty: 120, satuan: "gram" }, { bahan_id: "b2", nama: "Tepung", qty: 50, satuan: "gram" }, { bahan_id: "b3", nama: "Minyak Goreng", qty: 15, satuan: "ml" }] },
-      { id: "m2", nama: "Nasi Goreng", kategori: "Makanan", harga_jual: 15000,
-        biaya_tambahan: { listrik: 400, gas: 400, air: 100, labor: 2000 },
-        bahan: [{ bahan_id: "b4", nama: "Nasi", qty: 200, satuan: "gram" }, { bahan_id: "b5", nama: "Telur", qty: 1, satuan: "pcs" }, { bahan_id: "b3", nama: "Minyak Goreng", qty: 10, satuan: "ml" }] },
-      { id: "m3", nama: "Es Teh Manis", kategori: "Minuman", harga_jual: 5000,
-        biaya_tambahan: { listrik: 100, gas: 0, air: 200, labor: 500 },
-        bahan: [{ bahan_id: "b6", nama: "Teh", qty: 5, satuan: "gram" }, { bahan_id: "b7", nama: "Gula", qty: 20, satuan: "gram" }] },
-    ];
-    const SEED_STOK = {
-      "b1": { nama: "Ayam", stok_awal: 5000, stok_saat_ini: 3800, satuan: "gram", harga_beli_per_gram: 0.03, harga_beli_per_unit: 30000, unit_qty: 1000 },
-      "b2": { nama: "Tepung", stok_awal: 3000, stok_saat_ini: 2450, satuan: "gram", harga_beli_per_gram: 0.012, harga_beli_per_unit: 12000, unit_qty: 1000 },
-      "b3": { nama: "Minyak Goreng", stok_awal: 2000, stok_saat_ini: 1620, satuan: "ml", harga_beli_per_gram: 0.014, harga_beli_per_unit: 14000, unit_qty: 1000 },
-      "b4": { nama: "Nasi", stok_awal: 10000, stok_saat_ini: 7200, satuan: "gram", harga_beli_per_gram: 0.01, harga_beli_per_unit: 10000, unit_qty: 1000 },
-      "b5": { nama: "Telur", stok_awal: 40, stok_saat_ini: 28, satuan: "pcs", harga_beli_per_pcs: 2500, harga_beli_per_unit: 50000, unit_nama: "kodi", unit_qty: 20 },
-      "b6": { nama: "Teh", stok_awal: 500, stok_saat_ini: 420, satuan: "gram", harga_beli_per_gram: 0.06, harga_beli_per_unit: 30000, unit_qty: 500 },
-      "b7": { nama: "Gula", stok_awal: 5000, stok_saat_ini: 4100, satuan: "gram", harga_beli_per_gram: 0.013, harga_beli_per_unit: 13000, unit_qty: 1000 },
-    };
-    const SEED_TRANSAKSI = [
-      { id: "t1", waktu: new Date(Date.now() - 3600000).toISOString(), items: [{ menu_id: "m1", nama: "Ayam Geprek", qty: 2, harga: 18000 }, { menu_id: "m3", nama: "Es Teh Manis", qty: 2, harga: 5000 }], total: 46000, bayar: 50000, kembalian: 4000 },
-      { id: "t2", waktu: new Date(Date.now() - 7200000).toISOString(), items: [{ menu_id: "m2", nama: "Nasi Goreng", qty: 3, harga: 15000 }], total: 45000, bayar: 50000, kembalian: 5000 },
-    ];
+// ─── SEED DATA ────────────────────────────────────────────────────────────────
+const SEED_MENUS = [
+{ id:“m1”, nama:“Ayam Geprek”, kategori:“Makanan”, harga_jual:18000, biaya_tambahan:{listrik:500,gas:300,air:100,labor:2000}, bahan:[{bahan_id:“b1”,nama:“Ayam”,qty:120,satuan:“gram”},{bahan_id:“b2”,nama:“Tepung”,qty:50,satuan:“gram”},{bahan_id:“b3”,nama:“Minyak Goreng”,qty:15,satuan:“ml”}] },
+{ id:“m2”, nama:“Nasi Goreng”, kategori:“Makanan”, harga_jual:15000, biaya_tambahan:{listrik:400,gas:400,air:100,labor:2000}, bahan:[{bahan_id:“b4”,nama:“Nasi”,qty:200,satuan:“gram”},{bahan_id:“b5”,nama:“Telur”,qty:1,satuan:“pcs”},{bahan_id:“b3”,nama:“Minyak Goreng”,qty:10,satuan:“ml”}] },
+{ id:“m3”, nama:“Es Teh Manis”, kategori:“Minuman”, harga_jual:5000, biaya_tambahan:{listrik:100,gas:0,air:200,labor:500}, bahan:[{bahan_id:“b6”,nama:“Teh”,qty:5,satuan:“gram”},{bahan_id:“b7”,nama:“Gula”,qty:20,satuan:“gram”}] },
+];
+const SEED_STOK = {
+“b1”:{nama:“Ayam”,stok_awal:5000,stok_saat_ini:3800,satuan:“gram”,harga_beli_per_gram:0.03,harga_beli_per_unit:30000,unit_qty:1000,riwayat:[]},
+“b2”:{nama:“Tepung”,stok_awal:3000,stok_saat_ini:2450,satuan:“gram”,harga_beli_per_gram:0.012,harga_beli_per_unit:12000,unit_qty:1000,riwayat:[]},
+“b3”:{nama:“Minyak Goreng”,stok_awal:2000,stok_saat_ini:1620,satuan:“ml”,harga_beli_per_gram:0.014,harga_beli_per_unit:14000,unit_qty:1000,riwayat:[]},
+“b4”:{nama:“Nasi”,stok_awal:10000,stok_saat_ini:7200,satuan:“gram”,harga_beli_per_gram:0.01,harga_beli_per_unit:10000,unit_qty:1000,riwayat:[]},
+“b5”:{nama:“Telur”,stok_awal:40,stok_saat_ini:28,satuan:“pcs”,harga_beli_per_pcs:2500,harga_beli_per_unit:50000,unit_nama:“kodi”,unit_qty:20,riwayat:[]},
+“b6”:{nama:“Teh”,stok_awal:500,stok_saat_ini:420,satuan:“gram”,harga_beli_per_gram:0.06,harga_beli_per_unit:30000,unit_qty:500,riwayat:[]},
+“b7”:{nama:“Gula”,stok_awal:5000,stok_saat_ini:4100,satuan:“gram”,harga_beli_per_gram:0.013,harga_beli_per_unit:13000,unit_qty:1000,riwayat:[]},
+};
+const SEED_TRANSAKSI = [
+{ id:“t1”, waktu:new Date(Date.now()-3600000).toISOString(), items:[{menu_id:“m1”,nama:“Ayam Geprek”,qty:2,harga:18000},{menu_id:“m3”,nama:“Es Teh Manis”,qty:2,harga:5000}], total:46000, bayar:50000, kembalian:4000, tipe:“dine-in” },
+{ id:“t2”, waktu:new Date(Date.now()-7200000).toISOString(), items:[{menu_id:“m2”,nama:“Nasi Goreng”,qty:3,harga:15000}], total:45000, bayar:50000, kembalian:5000, tipe:“dine-in” },
+];
+const SEED_PERLENGKAPAN = {
+“p1”:{nama:“Sendok Plastik”,stok_awal:200,stok_saat_ini:160,satuan:“pcs”},
+“p2”:{nama:“Box Makanan”,stok_awal:100,stok_saat_ini:80,satuan:“pcs”},
+“p3”:{nama:“Kantong Plastik”,stok_awal:150,stok_saat_ini:120,satuan:“pcs”},
+};
+const SEED_BIAYA_OPS = { listrik:500, gas:300, air:100, labor:2000 };
+const SEED_PAKET = [];
 
-    // ─── HELPERS ─────────────────────────────────────────────────────────────────
-    const fmt = (n) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
-    const uid = () => Math.random().toString(36).slice(2, 9);
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+const fmt = (n) => new Intl.NumberFormat(“id-ID”,{style:“currency”,currency:“IDR”,minimumFractionDigits:0}).format(n);
+const uid = () => Math.random().toString(36).slice(2,9);
+const fmtTgl = (iso) => new Date(iso).toLocaleDateString(“id-ID”,{day:“2-digit”,month:“short”,year:“numeric”});
+const fmtJam = (iso) => new Date(iso).toLocaleTimeString(“id-ID”,{hour:“2-digit”,minute:“2-digit”});
 
-    function hargaPerUnit(s) {
-      if (s.satuan === "pcs") return s.harga_beli_per_pcs || 0;
-      return s.harga_beli_per_gram || 0;
-    }
-    function calcHPP(menu, stok) {
-      let hpp_bahan = 0;
-      menu.bahan.forEach(b => {
-        const s = stok[b.bahan_id];
-        if (!s) return;
-        hpp_bahan += b.qty * hargaPerUnit(s);
-      });
-      const biaya = Object.values(menu.biaya_tambahan || {}).reduce((a, b) => a + Number(b), 0);
-      return { hpp_bahan: Math.round(hpp_bahan), biaya_tambahan: biaya, hpp_total: Math.round(hpp_bahan + biaya) };
-    }
-    function getStokPersen(s) { return s.stok_awal > 0 ? Math.round((s.stok_saat_ini / s.stok_awal) * 100) : 0; }
-    function getStokWarna(pct) {
-      if (pct >= 70) return { bg: "#10b981", text: "#065f46", light: "#ecfdf5", label: "Aman" };
-      if (pct >= 30) return { bg: "#f59e0b", text: "#92400e", light: "#fffbeb", label: "Warning" };
-      return { bg: "#ef4444", text: "#991b1b", light: "#fef2f2", label: "Kritis" };
-    }
-    function hitungPorsi(menu, stok) {
-      if (!menu.bahan || menu.bahan.length === 0) return 0;
-      let minPorsi = Infinity;
-      menu.bahan.forEach(b => {
-        const s = stok[b.bahan_id];
-        if (!s || b.qty <= 0) return;
-        const porsi = Math.floor(s.stok_saat_ini / b.qty);
-        if (porsi < minPorsi) minPorsi = porsi;
-      });
-      return minPorsi === Infinity ? 0 : minPorsi;
-    }
-    function bottleneckBahan(menu, stok) {
-      let min = Infinity, nama = "";
-      menu.bahan.forEach(b => {
-        const s = stok[b.bahan_id];
-        if (!s || b.qty <= 0) return;
-        const porsi = Math.floor(s.stok_saat_ini / b.qty);
-        if (porsi < min) { min = porsi; nama = b.nama; }
-      });
-      return nama;
-    }
-    function fmtStokQty(s, field = "stok_saat_ini") {
-      const qty = s[field];
-      if (s.satuan === "pcs") return `${qty} pcs`;
-      if (qty >= 1000) return `${(qty / 1000).toFixed(2)} ${s.satuan === "gram" ? "kg" : "L"}`;
-      return `${qty} ${s.satuan}`;
-    }
-    function fmtHargaPerUnit(s) {
-      if (s.satuan === "pcs") return `${fmt(s.harga_beli_per_pcs || 0)}/pcs`;
-      return `${fmt((s.harga_beli_per_gram || 0) * 1000)}/kg`;
-    }
-    function nilaiStok(s) {
-      if (s.satuan === "pcs") return s.stok_saat_ini * (s.harga_beli_per_pcs || 0);
-      return s.stok_saat_ini * (s.harga_beli_per_gram || 0);
-    }
+function hargaPerUnit(s) {
+if (!s) return 0;
+if (s.satuan===“pcs”) return s.harga_beli_per_pcs||0;
+return s.harga_beli_per_gram||0;
+}
+function calcHPP(menu, stok, biayaOps) {
+let hpp_bahan=0;
+menu.bahan.forEach(b => { const s=stok[b.bahan_id]; if(s) hpp_bahan+=b.qty*hargaPerUnit(s); });
+const ops = biayaOps || menu.biaya_tambahan || {};
+const biaya = Object.values(ops).reduce((a,b)=>a+Number(b),0);
+return { hpp_bahan:Math.round(hpp_bahan), biaya_tambahan:biaya, hpp_total:Math.round(hpp_bahan+biaya) };
+}
+function getStokPersen(s) { return s.stok_awal>0?Math.round((s.stok_saat_ini/s.stok_awal)*100):0; }
+function getStokWarna(pct) {
+if(pct>=70) return {bg:”#22c55e”,text:”#15803d”,light:”#dcfce7”,label:“Aman”};
+if(pct>=30) return {bg:”#f59e0b”,text:”#b45309”,light:”#fef3c7”,label:“Warning”};
+return {bg:”#ef4444”,text:”#b91c1c”,light:”#fee2e2”,label:“Kritis”};
+}
+function fmtStokQty(s,field=“stok_saat_ini”) {
+const qty=s[field]||0;
+if(s.satuan===“pcs”) return `${qty} pcs`;
+if(qty>=1000) return `${(qty/1000).toFixed(2)} ${s.satuan==="gram"?"kg":"L"}`;
+return `${qty} ${s.satuan}`;
+}
+function fmtHargaPerUnit(s) {
+if(s.satuan===“pcs”) return `${fmt(s.harga_beli_per_pcs||0)}/pcs`;
+return `${fmt((s.harga_beli_per_gram||0)*1000)}/kg`;
+}
+function nilaiStok(s) {
+if(s.satuan===“pcs”) return s.stok_saat_ini*(s.harga_beli_per_pcs||0);
+return s.stok_saat_ini*(s.harga_beli_per_gram||0);
+}
+function hitungPorsi(menu,stok) {
+if(!menu.bahan||menu.bahan.length===0) return 0;
+let min=Infinity;
+menu.bahan.forEach(b=>{ const s=stok[b.bahan_id]; if(!s||b.qty<=0) return; const p=Math.floor(s.stok_saat_ini/b.qty); if(p<min) min=p; });
+return min===Infinity?0:min;
+}
+function bottleneckBahan(menu,stok) {
+let min=Infinity,nama=””;
+menu.bahan.forEach(b=>{ const s=stok[b.bahan_id]; if(!s||b.qty<=0) return; const p=Math.floor(s.stok_saat_ini/b.qty); if(p<min){min=p;nama=b.nama;} });
+return nama;
+}
 
-    // ─── ICONS ───────────────────────────────────────────────────────────────────
-    const Icon = ({ name, size = 20, color = "currentColor" }) => {
-      const paths = {
-        menu: "M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z",
-        stock: "M2 20h2v-4H2v4zm0-7h2V9H2v4zm0-7h2V2H2v4zm4 14h14v-2H6v2zm0-7h14V9H6v4zm0-7V4h14V2H6z",
-        cashier: "M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 16.1 6.1 17 7 17h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.48 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z",
-        dashboard: "M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z",
-        plus: "M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z",
-        trash: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",
-        edit: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z",
-        check: "M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z",
-        bell: "M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z",
-        arrow_back: "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z",
-        close: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z",
-        info: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z",
-        trending: "M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z",
-        food: "M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z",
-        logout: "M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z",
-        receipt: "M18 17H6v-2h12v2zm0-4H6v-2h12v2zm0-4H6V7h12v2zM3 22l1.5-1.5L6 22l1.5-1.5L9 22l1.5-1.5L12 22l1.5-1.5L15 22l1.5-1.5L18 22l1.5-1.5L21 22V2l-1.5 1.5L18 2l-1.5 1.5L15 2l-1.5 1.5L12 2l-1.5 1.5L9 2 7.5 3.5 6 2 4.5 3.5 3 2v20z",
-      };
+// ─── ICONS ────────────────────────────────────────────────────────────────────
+const Icon = ({name,size=20,color=“currentColor”}) => {
+const paths = {
+menu:“M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z”,
+stock:“M20 6h-2.18c.07-.44.18-.88.18-1.35C18 2.53 15.47 0 12.35 0c-1.7 0-3.21.79-4.17 2.04C7.32.79 5.8 0 4.1 0 1 0 0 2.53 0 4.65c0 .47.11.91.18 1.35H0v2h20V6zM0 8h20v12H0V8z”,
+cashier:“M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 16.1 6.1 17 7 17h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.48 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z”,
+dashboard:“M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z”,
+plus:“M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z”,
+trash:“M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z”,
+edit:“M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z”,
+check:“M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z”,
+bell:“M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z”,
+arrow_back:“M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z”,
+close:“M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z”,
+info:“M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z”,
+food:“M18.06 22.99h1.66c.84 0 1.53-.64 1.63-1.46L23 5.05h-5V1h-1.97v4.05h-4.97l.3 2.34c1.71.47 3.31 1.32 4.27 2.26 1.44 1.42 2.43 2.89 2.43 5.29v8.05zM1 21.99V21h15.03v.99c0 .55-.45 1-1.01 1H2.01c-.56 0-1.01-.45-1.01-1zm15.03-7c0-8.07-6.72-6-6.72-6s-6.72-2.07-6.72 6h13.44z”,
+logout:“M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z”,
+report:“M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z”,
+print:“M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z”,
+settings:“M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z”,
+package:“M20 7L12 3 4 7v10l8 4 8-4V7zm-8 1.5L17.5 11 12 13.5 6.5 11 12 8.5z”,
+};
+return <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d={paths[name]||paths.info}/></svg>;
+};
+
+// ─── STYLE HELPERS ────────────────────────────────────────────────────────────
+const inputStyle = { width:“100%”,background:”#0f0f18”,border:“1.5px solid #2a2a3e”,borderRadius:10,padding:“10px 14px”,color:”#e2e8f0”,fontSize:14,fontFamily:”‘Nunito’,sans-serif”,outline:“none”,boxSizing:“border-box”,marginBottom:0 };
+const labelStyle = { fontSize:11,fontWeight:700,color:”#6b7280”,letterSpacing:0.5,display:“block”,marginBottom:5,textTransform:“uppercase” };
+const btnStyle = (bg) => ({ display:“inline-flex”,alignItems:“center”,gap:6,background:bg,border:“none”,borderRadius:10,padding:“8px 14px”,color:”#fff”,fontSize:13,fontWeight:700,cursor:“pointer”,fontFamily:”‘Nunito’,sans-serif” });
+
+function Card({children,bg}) { return <div style={{background:bg,borderRadius:16,padding:“16px”}}>{children}</div>; }
+function SectionTitle({children}) { return <div style={{fontSize:12,fontWeight:800,color:”#6b7280”,marginBottom:10,letterSpacing:1,textTransform:“uppercase”}}>{children}</div>; }
+function FormGroup({label,children}) { return <div style={{marginBottom:10}}><label style={labelStyle}>{label}</label>{children}</div>; }
+function Row({label,value,bold,small}) {
+return <div style={{display:“flex”,justifyContent:“space-between”,marginBottom:6}}>
+<span style={{fontSize:small?12:13,color:”#9ca3af”}}>{label}</span>
+<span style={{fontSize:small?12:14,fontWeight:bold?800:600,color:bold?”#e2e8f0”:”#94a3b8”,fontFamily:bold?”‘Space Mono’”:“inherit”}}>{value}</span>
+
+  </div>;
+}
+function EmptyState({text}) { return <div style={{textAlign:"center",padding:"24px",color:"#4b5563",fontSize:13}}>{text}</div>; }
+
+const UNIT_KONVERSI = {“gram”:1,“kg”:1000,“ml”:1,“liter”:1000,“pcs”:1,“lusin (12)”:12,“kodi (20)”:20,“gross (144)”:144};
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+function App() {
+const [activeTab, setActiveTab] = useState(“dashboard”);
+const [showNotif, setShowNotif] = useState(false);
+const [showReset, setShowReset] = useState(false);
+const [notifikasi, setNotifikasi] = useState([]);
+
+const [menus, setMenus] = useLocalStorage(“restoku_menus”, SEED_MENUS);
+const [stok, setStok] = useLocalStorage(“restoku_stok”, SEED_STOK);
+const [transaksi, setTransaksi] = useLocalStorage(“restoku_transaksi”, SEED_TRANSAKSI);
+const [perlengkapan, setPerlengkapan] = useLocalStorage(“restoku_perlengkapan”, SEED_PERLENGKAPAN);
+const [biayaOps, setBiayaOps] = useLocalStorage(“restoku_biaya_ops”, SEED_BIAYA_OPS);
+const [paket, setPaket] = useLocalStorage(“restoku_paket”, SEED_PAKET);
+
+const allBahan = useCallback(() => {
+const map = {};
+menus.forEach(m => m.bahan.forEach(b => { if(!map[b.bahan_id]) map[b.bahan_id]={id:b.bahan_id,nama:b.nama,satuan:b.satuan}; }));
+return map;
+}, [menus]);
+
+useEffect(() => {
+const kritis = Object.entries(stok).filter(([,s])=>getStokPersen(s)<30).map(([id,s])=>({id,nama:s.nama,pct:getStokPersen(s)}));
+setNotifikasi(kritis);
+}, [stok]);
+
+const reduceStok = (items) => {
+setStok(prev => {
+const next = {…prev};
+items.forEach(({menu_id,qty,perlengkapan_ids}) => {
+// Kurangi bahan menu
+const menu = menus.find(m=>m.id===menu_id);
+if(menu) menu.bahan.forEach(b => {
+if(next[b.bahan_id]) next[b.bahan_id]={…next[b.bahan_id],stok_saat_ini:Math.max(0,next[b.bahan_id].stok_saat_ini-b.qty*qty)};
+});
+});
+return next;
+});
+// Kurangi perlengkapan
+items.forEach(item => {
+if(item.perlengkapan_ids && item.perlengkapan_ids.length>0) {
+setPerlengkapan(prev => {
+const next={…prev};
+item.perlengkapan_ids.forEach(pid => {
+if(next[pid]) next[pid]={…next[pid],stok_saat_ini:Math.max(0,next[pid].stok_saat_ini-item.qty)};
+});
+return next;
+});
+}
+});
+};
+
+const addTransaksi = (t) => {
+reduceStok(t.items);
+setTransaksi(prev=>[t,…prev]);
+};
+
+const tabItems = [
+{id:“dashboard”,label:“Dashboard”,icon:“dashboard”},
+{id:“menu”,label:“Menu”,icon:“food”},
+{id:“stok”,label:“Stok”,icon:“stock”},
+{id:“kasir”,label:“Kasir”,icon:“cashier”},
+{id:“laporan”,label:“Laporan”,icon:“report”},
+];
+const notifCount = notifikasi.length;
+
+return (
+<div style={{fontFamily:”‘Nunito’,sans-serif”,background:”#0f0f14”,minHeight:“100vh”,display:“flex”,justifyContent:“center”}}>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<div style={{width:“100%”,maxWidth:430,background:”#141418”,minHeight:“100vh”,display:“flex”,flexDirection:“column”}}>
+
+```
+    {/* TOPBAR */}
+    <div style={{background:"linear-gradient(135deg,#1a1a2e,#16213e)",padding:"16px 20px 12px",borderBottom:"1px solid #2a2a3e",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:100}}>
+      <div>
+        <div style={{fontFamily:"'Space Mono',monospace",fontSize:11,color:"#6366f1",fontWeight:700,letterSpacing:3,textTransform:"uppercase"}}>RestoKu</div>
+        <div style={{fontSize:18,fontWeight:900,color:"#fff",lineHeight:1.1}}>
+          {activeTab==="dashboard"&&"Dashboard"}{activeTab==="menu"&&"Manajemen Menu"}{activeTab==="stok"&&"Manajemen Stok"}{activeTab==="kasir"&&"Kasir"}{activeTab==="laporan"&&"Laporan Keuangan"}
+        </div>
+      </div>
+      <div style={{display:"flex",gap:8,alignItems:"center"}}>
+        <button onClick={()=>setShowNotif(!showNotif)} style={{position:"relative",background:notifCount>0?"#1e1b4b":"#1f1f2e",border:"none",borderRadius:12,padding:"8px 10px",cursor:"pointer",display:"flex",alignItems:"center"}}>
+          <Icon name="bell" size={22} color={notifCount>0?"#f59e0b":"#6b7280"}/>
+          {notifCount>0&&<span style={{position:"absolute",top:4,right:4,background:"#ef4444",color:"#fff",fontSize:9,fontWeight:800,borderRadius:"50%",width:16,height:16,display:"flex",alignItems:"center",justifyContent:"center"}}>{notifCount}</span>}
+        </button>
+        <button onClick={()=>setShowReset(true)} style={{background:"#1f1f2e",border:"none",borderRadius:12,padding:"8px 10px",cursor:"pointer",display:"flex",alignItems:"center"}}>
+          <Icon name="logout" size={20} color="#4b5563"/>
+        </button>
+      </div>
+    </div>
+
+    {showNotif&&(
+      <div style={{background:"#1a1a2e",borderBottom:"1px solid #2a2a3e",padding:"12px 20px"}}>
+        <div style={{fontSize:12,fontWeight:800,color:"#f59e0b",marginBottom:8,letterSpacing:1,textTransform:"uppercase"}}>⚠ Stok Kritis</div>
+        {notifCount===0?<div style={{fontSize:13,color:"#6b7280"}}>Semua stok aman ✓</div>:notifikasi.map(n=>(
+          <div key={n.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 10px",background:"#2d1b1b",borderRadius:8,marginBottom:4}}>
+            <span style={{fontSize:13,color:"#fca5a5",fontWeight:700}}>{n.nama}</span>
+            <span style={{fontSize:12,color:"#ef4444",fontWeight:800}}>{n.pct}%</span>
+          </div>
+        ))}
+      </div>
+    )}
+
+    {showReset&&(
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+        <div style={{background:"#1a1a24",borderRadius:20,padding:24,width:"100%",maxWidth:340}}>
+          <div style={{fontSize:18,fontWeight:900,color:"#ef4444",marginBottom:8}}>⚠️ Reset Data?</div>
+          <div style={{fontSize:14,color:"#9ca3af",marginBottom:20,lineHeight:1.6}}>Semua data akan dihapus dan kembali ke awal. Tidak bisa dibatalkan.</div>
+          <div style={{display:"flex",gap:10}}>
+            <button onClick={()=>setShowReset(false)} style={{flex:1,padding:"12px",background:"#2a2a3e",border:"none",borderRadius:12,color:"#e2e8f0",fontSize:14,fontWeight:700,cursor:"pointer"}}>Batal</button>
+            <button onClick={clearAllData} style={{flex:1,padding:"12px",background:"#7f1d1d",border:"none",borderRadius:12,color:"#fca5a5",fontSize:14,fontWeight:700,cursor:"pointer"}}>Ya, Reset</button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    <div style={{background:"#0a0a0f",padding:"4px 20px",display:"flex",alignItems:"center",gap:6}}>
+      <div style={{width:6,height:6,borderRadius:"50%",background:"#22c55e"}}/>
+      <span style={{fontSize:10,color:"#374151",fontFamily:"'Space Mono'"}}>Data tersimpan di perangkat ini</span>
+    </div>
+
+    <div style={{flex:1,overflowY:"auto",paddingBottom:80}}>
+      {activeTab==="dashboard"&&<DashboardPage stok={stok} transaksi={transaksi} menus={menus} paket={paket} biayaOps={biayaOps}/>}
+      {activeTab==="menu"&&<MenuPage menus={menus} setMenus={setMenus} stok={stok} setStok={setStok} allBahan={allBahan} biayaOps={biayaOps} setBiayaOps={setBiayaOps} paket={paket} setPaket={setPaket}/>}
+      {activeTab==="stok"&&<StokPage stok={stok} setStok={setStok} allBahan={allBahan} perlengkapan={perlengkapan} setPerlengkapan={setPerlengkapan}/>}
+      {activeTab==="kasir"&&<KasirPage menus={menus} paket={paket} addTransaksi={addTransaksi} stok={stok} perlengkapan={perlengkapan}/>}
+      {activeTab==="laporan"&&<LaporanPage transaksi={transaksi} menus={menus} paket={paket}/>}
+    </div>
+
+    <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,background:"#0f0f14",borderTop:"1px solid #1f1f2e",display:"flex",zIndex:100,padding:"8px 0 12px"}}>
+      {tabItems.map(t=>{const active=activeTab===t.id;return(
+        <button key={t.id} onClick={()=>setActiveTab(t.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",padding:"4px 0"}}>
+          <div style={{width:40,height:36,borderRadius:12,background:active?"#6366f1":"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s"}}>
+            <Icon name={t.icon} size={20} color={active?"#fff":"#4b5563"}/>
+          </div>
+          <span style={{fontSize:9,fontWeight:active?800:600,color:active?"#6366f1":"#4b5563",letterSpacing:0.3}}>{t.label}</span>
+        </button>
+      );})}
+    </div>
+  </div>
+</div>
+```
+
+);
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+function DashboardPage({stok,transaksi,menus,paket,biayaOps}) {
+const today = new Date().toDateString();
+const todayTx = transaksi.filter(t=>new Date(t.waktu).toDateString()===today);
+const totalHarian = todayTx.reduce((a,t)=>a+t.total,0);
+const menuCount={};
+transaksi.forEach(t=>t.items.forEach(i=>{menuCount[i.nama]=(menuCount[i.nama]||0)+i.qty;}));
+const terlaris=Object.entries(menuCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
+const allMenus=[…menus,…paket];
+const porsiData=menus.map(m=>({…m,porsi:hitungPorsi(m,stok),bottleneck:bottleneckBahan(m,stok)})).sort((a,b)=>a.porsi-b.porsi);
+const totalPorsi=porsiData.reduce((a,m)=>a+m.porsi,0);
+const menuHabis=porsiData.filter(m=>m.porsi===0).length;
+const menuKritis=porsiData.filter(m=>m.porsi>0&&m.porsi<=5).length;
+
+return (
+<div style={{padding:“16px 20px”}}>
+<div style={{display:“grid”,gridTemplateColumns:“1fr 1fr”,gap:12,marginBottom:20}}>
+<Card bg="linear-gradient(135deg,#6366f1,#8b5cf6)">
+<div style={{fontSize:11,color:“rgba(255,255,255,.7)”,fontWeight:700,letterSpacing:1,textTransform:“uppercase”}}>Penjualan Hari Ini</div>
+<div style={{fontSize:22,fontWeight:900,color:”#fff”,marginTop:4}}>{fmt(totalHarian)}</div>
+<div style={{fontSize:11,color:“rgba(255,255,255,.6)”,marginTop:2}}>{todayTx.length} transaksi</div>
+</Card>
+<Card bg={menuHabis>0?“linear-gradient(135deg,#7f1d1d,#991b1b)”:menuKritis>0?“linear-gradient(135deg,#78350f,#92400e)”:“linear-gradient(135deg,#14532d,#166534)”}>
+<div style={{fontSize:11,color:“rgba(255,255,255,.7)”,fontWeight:700,letterSpacing:1,textTransform:“uppercase”}}>Kapasitas Produksi</div>
+<div style={{fontSize:22,fontWeight:900,color:”#fff”,marginTop:4}}>{totalPorsi} porsi</div>
+<div style={{fontSize:11,color:“rgba(255,255,255,.6)”,marginTop:2}}>{menuHabis>0?`⛔ ${menuHabis} menu habis`:menuKritis>0?`⚠ ${menuKritis} hampir habis`:`✓ ${menus.length} menu tersedia`}</div>
+</Card>
+</div>
+
+```
+  <SectionTitle>🍽️ Estimasi Porsi dari Stok</SectionTitle>
+  <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
+    {porsiData.map(m=>{
+      const porsiMax=Math.max(...porsiData.map(x=>x.porsi),1);
+      const barPct=Math.min(100,Math.round((m.porsi/porsiMax)*100));
+      const warna=m.porsi===0?"#ef4444":m.porsi<=5?"#f59e0b":"#22c55e";
+      const warnaLight=m.porsi===0?"#fee2e2":m.porsi<=5?"#fef3c7":"#dcfce7";
+      const warnaText=m.porsi===0?"#b91c1c":m.porsi<=5?"#b45309":"#15803d";
+      const label=m.porsi===0?"Habis":m.porsi<=5?"Hampir habis":"Tersedia";
       return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill={color} style={{ flexShrink: 0 }}>
-          <path d={paths[name] || paths.info} />
-        </svg>
-      );
-    };
-
-    // ─── STYLE HELPERS ────────────────────────────────────────────────────────────
-    const inputStyle = {
-      width: "100%",
-      background: "#f8f9fe",
-      border: "1.5px solid #e4e6ef",
-      borderRadius: 12,
-      padding: "14px 16px",
-      color: "#1a1d2e",
-      fontSize: 15,
-      fontFamily: "'Plus Jakarta Sans', sans-serif",
-      outline: "none",
-      boxSizing: "border-box",
-      transition: "border-color .15s",
-    };
-    const labelStyle = {
-      fontSize: 12,
-      fontWeight: 700,
-      color: "#8b90b0",
-      letterSpacing: 0.5,
-      display: "block",
-      marginBottom: 6,
-      textTransform: "uppercase",
-    };
-
-    const btnPrimary = (color = "#6366f1") => ({
-      display: "inline-flex", alignItems: "center", gap: 8,
-      background: color, border: "none", borderRadius: 12, padding: "14px 20px",
-      color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer",
-      fontFamily: "'Plus Jakarta Sans', sans-serif",
-      boxShadow: `0 4px 12px ${color}40`,
-      transition: "opacity .15s, transform .1s",
-      minHeight: 52,
-    });
-    const btnSecondary = {
-      display: "inline-flex", alignItems: "center", gap: 8,
-      background: "#f0f1f7", border: "1.5px solid #e4e6ef", borderRadius: 12, padding: "12px 18px",
-      color: "#4b5280", fontSize: 14, fontWeight: 700, cursor: "pointer",
-      fontFamily: "'Plus Jakarta Sans', sans-serif",
-      minHeight: 48,
-    };
-    const btnDanger = {
-      display: "inline-flex", alignItems: "center", gap: 8,
-      background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 12, padding: "10px 16px",
-      color: "#ef4444", fontSize: 13, fontWeight: 700, cursor: "pointer",
-      fontFamily: "'Plus Jakarta Sans', sans-serif",
-      minHeight: 44,
-    };
-
-    // ─── SHARED COMPONENTS ────────────────────────────────────────────────────────
-    function Card({ children, style = {} }) {
-      return <div style={{ background: "#fff", borderRadius: 16, padding: "18px", boxShadow: "0 1px 4px rgba(0,0,0,.06), 0 2px 8px rgba(0,0,0,.04)", ...style }}>{children}</div>;
-    }
-    function SectionTitle({ children, action }) {
-      return (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: "#8b90b0", letterSpacing: 1, textTransform: "uppercase" }}>{children}</div>
-          {action}
+        <div key={m.id} style={{background:"#1a1a24",borderRadius:14,padding:"12px 16px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+            <div>
+              <div style={{fontSize:14,fontWeight:800,color:"#e2e8f0"}}>{m.nama}</div>
+              <div style={{fontSize:11,color:"#4b5563",marginTop:1}}>{m.porsi===0?`⛔ Kurang: ${m.bottleneck}`:m.porsi<=5?`⚠ Min. bahan: ${m.bottleneck}`:`Pembatas: ${m.bottleneck}`}</div>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:3}}>
+              <span style={{fontFamily:"'Space Mono'",fontSize:18,fontWeight:900,color:warna,lineHeight:1}}>{m.porsi}</span>
+              <span style={{fontSize:10,background:warnaLight,color:warnaText,padding:"1px 7px",borderRadius:20,fontWeight:800}}>{label}</span>
+            </div>
+          </div>
+          <div style={{background:"#0f0f18",borderRadius:6,height:6,overflow:"hidden"}}>
+            <div style={{width:`${barPct}%`,height:"100%",background:warna,borderRadius:6,transition:"width .5s ease"}}/>
+          </div>
         </div>
       );
-    }
-    function FormGroup({ label, children, style = {} }) {
+    })}
+  </div>
+
+  <SectionTitle>📊 Status Stok Real-time</SectionTitle>
+  <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:20}}>
+    {Object.entries(stok).map(([id,s])=>{
+      const pct=getStokPersen(s);const w=getStokWarna(pct);
       return (
-        <div style={{ marginBottom: 14, ...style }}>
-          <label style={labelStyle}>{label}</label>
-          {children}
+        <div key={id} style={{background:"#1a1a24",borderRadius:14,padding:"12px 16px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <span style={{fontSize:14,fontWeight:700,color:"#e2e8f0"}}>{s.nama}</span>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:12,background:w.light,color:w.text,padding:"2px 8px",borderRadius:20,fontWeight:800}}>{w.label}</span>
+              <span style={{fontFamily:"'Space Mono'",fontSize:13,color:w.bg,fontWeight:700}}>{pct}%</span>
+            </div>
+          </div>
+          <div style={{background:"#0f0f18",borderRadius:6,height:8,overflow:"hidden"}}>
+            <div style={{width:`${pct}%`,height:"100%",background:w.bg,borderRadius:6,transition:"width .5s ease"}}/>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
+            <span style={{fontSize:10,color:"#6b7280"}}>{fmtStokQty(s)}</span>
+            <span style={{fontSize:10,color:"#4b5563"}}>dari {fmtStokQty(s,"stok_awal")}</span>
+          </div>
         </div>
       );
-    }
-    function EmptyState({ icon = "info", text }) {
+    })}
+  </div>
+
+  <SectionTitle>🔥 Menu Terlaris</SectionTitle>
+  <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
+    {terlaris.length===0?<EmptyState text="Belum ada transaksi"/>:terlaris.map(([nama,qty],i)=>(
+      <div key={nama} style={{background:"#1a1a24",borderRadius:12,padding:"10px 16px",display:"flex",alignItems:"center",gap:12}}>
+        <div style={{width:28,height:28,background:["#f59e0b","#94a3b8","#cd7c2f"][i]||"#2a2a3e",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Space Mono'",fontSize:12,fontWeight:700,color:"#fff"}}>{i+1}</div>
+        <div style={{flex:1,fontSize:14,fontWeight:700,color:"#e2e8f0"}}>{nama}</div>
+        <div style={{fontFamily:"'Space Mono'",fontSize:13,color:"#6366f1",fontWeight:700}}>{qty}x</div>
+      </div>
+    ))}
+  </div>
+
+  <SectionTitle>🧾 Transaksi Terakhir</SectionTitle>
+  {transaksi.slice(0,5).map(t=>(
+    <div key={t.id} style={{background:"#1a1a24",borderRadius:12,padding:"10px 16px",marginBottom:8}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+        <span style={{fontSize:12,color:"#6b7280",fontFamily:"'Space Mono'"}}>{fmtJam(t.waktu)}</span>
+        <span style={{fontSize:14,fontWeight:800,color:"#22c55e"}}>{fmt(t.total)}</span>
+      </div>
+      <div style={{fontSize:12,color:"#9ca3af"}}>{t.items.map(i=>`${i.nama} ×${i.qty}`).join(", ")}</div>
+    </div>
+  ))}
+</div>
+```
+
+);
+}
+
+// ─── MENU PAGE ────────────────────────────────────────────────────────────────
+function MenuPage({menus,setMenus,stok,setStok,allBahan,biayaOps,setBiayaOps,paket,setPaket}) {
+const [subTab, setSubTab] = useState(“menu”); // menu | paket | biaya
+const [view, setView] = useState(“list”);
+const [editMenu, setEditMenu] = useState(null);
+const [hppView, setHppView] = useState(null);
+const [editPaket, setEditPaket] = useState(null);
+
+const deleteMenu = (id) => setMenus(prev=>prev.filter(m=>m.id!==id));
+const saveMenu = (menu) => {
+if(menu.id&&menus.find(m=>m.id===menu.id)) setMenus(prev=>prev.map(m=>m.id===menu.id?menu:m));
+else setMenus(prev=>[…prev,{…menu,id:“m”+uid()}]);
+const newBahan={};
+[…menus,menu].forEach(m=>m.bahan.forEach(b=>{
+if(!stok[b.bahan_id]&&!newBahan[b.bahan_id]) newBahan[b.bahan_id]={nama:b.nama,stok_awal:0,stok_saat_ini:0,satuan:b.satuan,harga_beli_per_gram:0,harga_beli_per_unit:0,unit_qty:1000,riwayat:[]};
+}));
+if(Object.keys(newBahan).length>0) setStok(prev=>({…prev,…newBahan}));
+setView(“list”); setEditMenu(null);
+};
+const savePaket = (p) => {
+if(p.id&&paket.find(x=>x.id===p.id)) setPaket(prev=>prev.map(x=>x.id===p.id?p:x));
+else setPaket(prev=>[…prev,{…p,id:“pk”+uid()}]);
+setEditPaket(null);
+};
+
+if(hppView) return <HppView menu={hppView} stok={stok} biayaOps={biayaOps} onBack={()=>setHppView(null)}/>;
+if(view===“form”) return <MenuForm menu={editMenu} stok={stok} biayaOps={biayaOps} onSave={saveMenu} onBack={()=>{setView(“list”);setEditMenu(null);}}/>;
+if(editPaket!==null) return <PaketForm paket={editPaket===false?null:editPaket} menus={menus} onSave={savePaket} onBack={()=>setEditPaket(null)}/>;
+
+const kategoris=[…new Set(menus.map(m=>m.kategori))];
+
+return (
+<div style={{padding:“0 0 16px”}}>
+{/* Sub tabs */}
+<div style={{display:“flex”,borderBottom:“1px solid #2a2a3e”,marginBottom:16}}>
+{[[“menu”,“Menu”],[“paket”,“Paket”],[“biaya”,“Biaya Ops”]].map(([id,lbl])=>(
+<button key={id} onClick={()=>setSubTab(id)} style={{flex:1,padding:“12px 0”,background:“none”,border:“none”,borderBottom:subTab===id?“2px solid #6366f1”:“2px solid transparent”,color:subTab===id?”#6366f1”:”#6b7280”,fontSize:13,fontWeight:700,cursor:“pointer”}}>
+{lbl}
+</button>
+))}
+</div>
+
+```
+  {subTab==="menu"&&(
+    <div style={{padding:"0 20px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <span style={{fontSize:13,color:"#6b7280"}}>{menus.length} menu terdaftar</span>
+        <button onClick={()=>{setEditMenu(null);setView("form");}} style={btnStyle("#6366f1")}><Icon name="plus" size={16} color="#fff"/> Tambah</button>
+      </div>
+      {kategoris.map(kat=>(
+        <div key={kat} style={{marginBottom:20}}>
+          <div style={{fontSize:11,fontWeight:800,color:"#6366f1",letterSpacing:2,textTransform:"uppercase",marginBottom:8}}>{kat}</div>
+          {menus.filter(m=>m.kategori===kat).map(menu=>{
+            const hpp=calcHPP(menu,stok,biayaOps);
+            return (
+              <div key={menu.id} style={{background:"#1a1a24",borderRadius:14,padding:"14px 16px",marginBottom:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                  <div>
+                    <div style={{fontSize:15,fontWeight:800,color:"#e2e8f0"}}>{menu.nama}</div>
+                    <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>{menu.bahan.length} bahan · HPP {fmt(hpp.hpp_total)}</div>
+                  </div>
+                  <div style={{fontSize:15,fontWeight:800,color:"#22c55e"}}>{fmt(menu.harga_jual)}</div>
+                </div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
+                  {menu.bahan.map(b=><span key={b.bahan_id} style={{fontSize:11,background:"#0f0f18",color:"#9ca3af",padding:"3px 8px",borderRadius:20,border:"1px solid #2a2a3e"}}>{b.nama} {b.qty}{b.satuan}</span>)}
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={()=>setHppView(menu)} style={{...btnStyle("#0f766e"),fontSize:12,padding:"6px 12px"}}>HPP</button>
+                  <button onClick={()=>{setEditMenu(menu);setView("form");}} style={{...btnStyle("#2563eb"),fontSize:12,padding:"6px 12px"}}>Edit</button>
+                  <button onClick={()=>deleteMenu(menu.id)} style={{...btnStyle("#7f1d1d"),fontSize:12,padding:"6px 12px"}}>Hapus</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  )}
+
+  {subTab==="paket"&&(
+    <div style={{padding:"0 20px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <span style={{fontSize:13,color:"#6b7280"}}>{paket.length} paket</span>
+        <button onClick={()=>setEditPaket(false)} style={btnStyle("#6366f1")}><Icon name="plus" size={16} color="#fff"/> Tambah Paket</button>
+      </div>
+      {paket.length===0?<EmptyState text="Belum ada paket. Buat paket untuk menggabungkan beberapa menu."/>:paket.map(p=>(
+        <div key={p.id} style={{background:"#1a1a24",borderRadius:14,padding:"14px 16px",marginBottom:10}}>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+            <div style={{fontSize:15,fontWeight:800,color:"#e2e8f0"}}>{p.nama}</div>
+            <div style={{fontSize:15,fontWeight:800,color:"#22c55e"}}>{fmt(p.harga_jual)}</div>
+          </div>
+          <div style={{fontSize:12,color:"#6b7280",marginBottom:8}}>Isi: {(p.items||[]).map(i=>{const m=menus.find(x=>x.id===i.menu_id);return m?`${m.nama}×${i.qty}`:""}).filter(Boolean).join(", ")}</div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>setEditPaket(p)} style={{...btnStyle("#2563eb"),fontSize:12,padding:"6px 12px"}}>Edit</button>
+            <button onClick={()=>setPaket(prev=>prev.filter(x=>x.id!==p.id))} style={{...btnStyle("#7f1d1d"),fontSize:12,padding:"6px 12px"}}>Hapus</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+
+  {subTab==="biaya"&&(
+    <div style={{padding:"0 20px"}}>
+      <div style={{background:"#1a1a24",borderRadius:16,padding:"16px",marginBottom:16}}>
+        <div style={{fontSize:13,fontWeight:800,color:"#6366f1",marginBottom:4}}>⚙️ Biaya Operasional Global</div>
+        <div style={{fontSize:12,color:"#6b7280",marginBottom:14}}>Nilai ini dipakai otomatis sebagai default untuk semua menu baru. Menu yang sudah ada bisa di-override per menu.</div>
+        {Object.entries(biayaOps).map(([k,v])=>(
+          <div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <label style={{fontSize:14,color:"#e2e8f0",textTransform:"capitalize",fontWeight:700}}>{k==="labor"?"Labor Cost":k.charAt(0).toUpperCase()+k.slice(1)}</label>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <input type="number" value={v} onChange={e=>setBiayaOps(prev=>({...prev,[k]:Number(e.target.value)}))}
+                style={{...inputStyle,width:90,textAlign:"right",marginBottom:0}}/>
+              <span style={{fontSize:12,color:"#6b7280"}}>Rp/porsi</span>
+            </div>
+          </div>
+        ))}
+        <div style={{height:1,background:"#2a2a3e",margin:"12px 0"}}/>
+        <Row label="Total per porsi" value={fmt(Object.values(biayaOps).reduce((a,b)=>a+Number(b),0))} bold/>
+      </div>
+      <div style={{background:"#1a1a24",borderRadius:12,padding:"12px 16px"}}>
+        <div style={{fontSize:12,color:"#6b7280",lineHeight:1.6}}>
+          💡 <strong style={{color:"#9ca3af"}}>Cara kerja:</strong> Saat tambah menu baru, nilai ini otomatis terisi. Kamu bisa ubah per menu di form edit menu jika menu tertentu punya biaya berbeda.
+        </div>
+      </div>
+    </div>
+  )}
+</div>
+```
+
+);
+}
+
+// ─── PAKET FORM ───────────────────────────────────────────────────────────────
+function PaketForm({paket,menus,onSave,onBack}) {
+const [nama,setNama]=useState(paket?.nama||””);
+const [harga,setHarga]=useState(paket?.harga_jual||””);
+const [items,setItems]=useState(paket?.items||[]);
+const addItem=()=>setItems(prev=>[…prev,{menu_id:””,qty:1}]);
+const removeItem=(i)=>setItems(prev=>prev.filter((_,idx)=>idx!==i));
+const updateItem=(i,field,val)=>setItems(prev=>prev.map((x,idx)=>idx===i?{…x,[field]:val}:x));
+const handleSave=()=>{
+if(!nama||!harga||items.length===0||items.some(i=>!i.menu_id)) return alert(“Lengkapi semua field!”);
+onSave({…paket,nama,harga_jual:Number(harga),items,kategori:“Paket”});
+};
+return (
+<div style={{padding:“16px 20px”}}>
+<div style={{display:“flex”,alignItems:“center”,gap:12,marginBottom:20}}>
+<button onClick={onBack} style={{background:“none”,border:“none”,cursor:“pointer”}}><Icon name="arrow_back" size={22} color="#9ca3af"/></button>
+<div style={{fontSize:16,fontWeight:800,color:”#e2e8f0”}}>{paket?“Edit Paket”:“Buat Paket Baru”}</div>
+</div>
+<FormGroup label="Nama Paket"><input value={nama} onChange={e=>setNama(e.target.value)} placeholder=“Paket Hemat A…” style={inputStyle}/></FormGroup>
+<FormGroup label="Harga Jual Paket (Rp)"><input type=“number” value={harga} onChange={e=>setHarga(e.target.value)} placeholder=“25000” style={inputStyle}/></FormGroup>
+<div style={{marginBottom:16}}>
+<div style={{display:“flex”,justifyContent:“space-between”,alignItems:“center”,marginBottom:10}}>
+<label style={labelStyle}>Isi Paket</label>
+<button onClick={addItem} style={{…btnStyle(”#4b5563”),fontSize:11,padding:“4px 10px”}}><Icon name="plus" size={14} color="#fff"/> Menu</button>
+</div>
+{items.map((item,i)=>(
+<div key={i} style={{background:”#1a1a24”,borderRadius:12,padding:“10px 12px”,marginBottom:8,display:“flex”,gap:8,alignItems:“center”}}>
+<select value={item.menu_id} onChange={e=>updateItem(i,“menu_id”,e.target.value)} style={{…inputStyle,flex:2,marginBottom:0}}>
+<option value="">– Pilih menu –</option>
+{menus.map(m=><option key={m.id} value={m.id}>{m.nama} ({fmt(m.harga_jual)})</option>)}
+</select>
+<input type=“number” value={item.qty} onChange={e=>updateItem(i,“qty”,Number(e.target.value))} min={1} style={{…inputStyle,width:56,marginBottom:0,textAlign:“center”}}/>
+<button onClick={()=>removeItem(i)} style={{background:“none”,border:“none”,cursor:“pointer”}}><Icon name="close" size={18} color="#6b7280"/></button>
+</div>
+))}
+{items.length>0&&(
+<div style={{background:”#0f0f18”,borderRadius:8,padding:“8px 12px”,fontSize:12,color:”#6b7280”}}>
+Harga normal: {fmt(items.reduce((a,item)=>{const m=menus.find(x=>x.id===item.menu_id);return a+(m?m.harga_jual*item.qty:0);},0))}
+</div>
+)}
+</div>
+<button onClick={handleSave} style={{…btnStyle(”#6366f1”),width:“100%”,justifyContent:“center”,padding:“14px”}}>
+<Icon name="check" size={18} color="#fff"/> Simpan Paket
+</button>
+</div>
+);
+}
+
+// ─── MENU FORM ────────────────────────────────────────────────────────────────
+function MenuForm({menu,stok,biayaOps,onSave,onBack}) {
+const [nama,setNama]=useState(menu?.nama||””);
+const [kategori,setKategori]=useState(menu?.kategori||“Makanan”);
+const [harga,setHarga]=useState(menu?.harga_jual||””);
+const [bahan,setBahan]=useState(menu?.bahan||[{bahan_id:“b”+uid(),nama:””,qty:””,satuan:“gram”,isNew:true}]);
+const [biaya,setBiaya]=useState(menu?.biaya_tambahan||{…biayaOps});
+const bahanExisting=Object.entries(stok||{}).map(([id,s])=>({bahan_id:id,nama:s.nama,satuan:s.satuan}));
+const addBahan=()=>setBahan(prev=>[…prev,{bahan_id:“b”+uid(),nama:””,qty:””,satuan:“gram”,isNew:true}]);
+const removeBahan=(i)=>setBahan(prev=>prev.filter((_,idx)=>idx!==i));
+const updateBahan=(i,field,val)=>setBahan(prev=>prev.map((b,idx)=>idx===i?{…b,[field]:val}:b));
+const pilihExisting=(i,bahanId)=>{
+if(!bahanId) return;
+const found=bahanExisting.find(b=>b.bahan_id===bahanId);
+if(!found) return;
+setBahan(prev=>prev.map((b,idx)=>idx===i?{…b,bahan_id:found.bahan_id,nama:found.nama,satuan:found.satuan,isNew:false}:b));
+};
+const handleSave=()=>{
+if(!nama||bahan.some(b=>!b.nama||!b.qty)) return alert(“Lengkapi semua field!”);
+onSave({…menu,nama,kategori,harga_jual:Number(harga),bahan:bahan.map(b=>({…b,qty:Number(b.qty)})),biaya_tambahan:biaya});
+};
+return (
+<div style={{padding:“16px 20px”}}>
+<div style={{display:“flex”,alignItems:“center”,gap:12,marginBottom:20}}>
+<button onClick={onBack} style={{background:“none”,border:“none”,cursor:“pointer”}}><Icon name="arrow_back" size={22} color="#9ca3af"/></button>
+<div style={{fontSize:16,fontWeight:800,color:”#e2e8f0”}}>{menu?“Edit Menu”:“Tambah Menu Baru”}</div>
+</div>
+<FormGroup label="Nama Menu"><input value={nama} onChange={e=>setNama(e.target.value)} placeholder=“Ayam Geprek…” style={inputStyle}/></FormGroup>
+<FormGroup label="Kategori">
+<select value={kategori} onChange={e=>setKategori(e.target.value)} style={inputStyle}>
+{[“Makanan”,“Minuman”,“Snack”,“Paket”].map(k=><option key={k}>{k}</option>)}
+</select>
+</FormGroup>
+<FormGroup label="Harga Jual (Rp)"><input type=“number” value={harga} onChange={e=>setHarga(e.target.value)} placeholder=“15000” style={inputStyle}/></FormGroup>
+
+```
+  <div style={{marginBottom:16}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+      <label style={labelStyle}>Daftar Bahan</label>
+      <button onClick={addBahan} style={{...btnStyle("#4b5563"),fontSize:11,padding:"4px 10px"}}><Icon name="plus" size={14} color="#fff"/> Bahan</button>
+    </div>
+    {bahan.map((b,i)=>{
+      const isExisting=bahanExisting.some(e=>e.bahan_id===b.bahan_id);
       return (
-        <div style={{ textAlign: "center", padding: "32px 20px", color: "#8b90b0" }}>
-          <div style={{ marginBottom: 8, opacity: .5 }}><Icon name={icon} size={32} color="#8b90b0" /></div>
-          <div style={{ fontSize: 14, fontWeight: 600 }}>{text}</div>
+        <div key={i} style={{background:"#1a1a24",borderRadius:12,padding:"12px",marginBottom:8,border:isExisting?"1.5px solid #1f2d1f":"1.5px solid #1f1f2e"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <span style={{fontSize:10,fontWeight:700,letterSpacing:0.5,textTransform:"uppercase",color:isExisting?"#6ee7b7":"#a5b4fc",background:isExisting?"#0f2a1e":"#1e1b4b",padding:"2px 8px",borderRadius:20}}>
+              {isExisting?"✓ Dari stok":"✦ Bahan baru"}
+            </span>
+            <button onClick={()=>removeBahan(i)} style={{background:"none",border:"none",cursor:"pointer",padding:4}}><Icon name="close" size={16} color="#6b7280"/></button>
+          </div>
+          {bahanExisting.length>0&&(
+            <div style={{marginBottom:8}}>
+              <div style={{fontSize:10,color:"#6b7280",fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Pilih dari stok</div>
+              <select value={isExisting?b.bahan_id:""} onChange={e=>pilihExisting(i,e.target.value)} style={{...inputStyle,marginBottom:0,color:isExisting?"#e2e8f0":"#6b7280"}}>
+                <option value="">-- atau tulis bahan baru --</option>
+                {bahanExisting.map(e=><option key={e.bahan_id} value={e.bahan_id}>{e.nama} ({e.satuan})</option>)}
+              </select>
+            </div>
+          )}
+          {bahanExisting.length>0&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><div style={{flex:1,height:1,background:"#2a2a3e"}}/><span style={{fontSize:10,color:"#4b5563"}}>atau tulis manual</span><div style={{flex:1,height:1,background:"#2a2a3e"}}/></div>}
+          <input value={b.nama} onChange={e=>updateBahan(i,"nama",e.target.value)} placeholder="Nama bahan baru..." style={{...inputStyle,marginBottom:8,opacity:isExisting?0.5:1}}/>
+          <div style={{display:"flex",gap:6}}>
+            <input type="number" value={b.qty} onChange={e=>updateBahan(i,"qty",e.target.value)} placeholder="Jumlah" style={{...inputStyle,flex:1,marginBottom:0}}/>
+            <select value={b.satuan} onChange={e=>updateBahan(i,"satuan",e.target.value)} style={{...inputStyle,flex:1,marginBottom:0}}>
+              {["gram","ml","kg","liter","pcs"].map(s=><option key={s}>{s}</option>)}
+            </select>
+          </div>
         </div>
       );
-    }
-    function Badge({ text, color = "#6366f1", bg = "#eef0ff" }) {
-      return <span style={{ fontSize: 11, fontWeight: 800, color, background: bg, padding: "3px 10px", borderRadius: 20, letterSpacing: 0.3 }}>{text}</span>;
-    }
-    function ProgressBar({ pct, color, thin }) {
-      return (
-        <div style={{ background: "#f0f1f7", borderRadius: 99, height: thin ? 6 : 8, overflow: "hidden" }}>
-          <div style={{ width: `${Math.min(100, pct)}%`, height: "100%", background: color, borderRadius: 99, transition: "width .6s cubic-bezier(.4,0,.2,1)" }} />
-        </div>
-      );
-    }
+    })}
+  </div>
 
-    // ─── MAIN APP ─────────────────────────────────────────────────────────────────
-    function App() {
-      const [activeTab, setActiveTab] = useState("dashboard");
-      const [showNotif, setShowNotif] = useState(false);
-      const [showReset, setShowReset] = useState(false);
-      const [menus, setMenus] = useLocalStorage("restoku_menus", SEED_MENUS);
-      const [stok, setStok] = useLocalStorage("restoku_stok", SEED_STOK);
-      const [transaksi, setTransaksi] = useLocalStorage("restoku_transaksi", SEED_TRANSAKSI);
-      const [notifikasi, setNotifikasi] = useState([]);
+  <div style={{background:"#1a1a24",borderRadius:12,padding:"14px",marginBottom:20}}>
+    <div style={{fontSize:12,fontWeight:800,color:"#6b7280",marginBottom:4,letterSpacing:1,textTransform:"uppercase"}}>Biaya Tambahan (per porsi)</div>
+    <div style={{fontSize:11,color:"#4b5563",marginBottom:10}}>Default dari Biaya Ops global — ubah jika menu ini berbeda</div>
+    {Object.entries(biaya).map(([k,v])=>(
+      <div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+        <label style={{fontSize:13,color:"#9ca3af",textTransform:"capitalize"}}>{k==="labor"?"Labor Cost":k}</label>
+        <input type="number" value={v} onChange={e=>setBiaya(p=>({...p,[k]:Number(e.target.value)}))} style={{...inputStyle,width:90,textAlign:"right",marginBottom:0}}/>
+      </div>
+    ))}
+  </div>
+  <button onClick={handleSave} style={{...btnStyle("#6366f1"),width:"100%",justifyContent:"center",padding:"14px"}}>
+    <Icon name="check" size={18} color="#fff"/> Simpan Menu
+  </button>
+</div>
+```
 
-      const allBahan = useCallback(() => {
-        const map = {};
-        menus.forEach(m => m.bahan.forEach(b => {
-          if (!map[b.bahan_id]) map[b.bahan_id] = { id: b.bahan_id, nama: b.nama, satuan: b.satuan };
-        }));
-        return map;
-      }, [menus]);
+);
+}
 
-      useEffect(() => {
-        const kritis = Object.entries(stok)
-          .filter(([, s]) => getStokPersen(s) < 30)
-          .map(([id, s]) => ({ id, nama: s.nama, pct: getStokPersen(s) }));
-        setNotifikasi(kritis);
-      }, [stok]);
+// ─── HPP VIEW ─────────────────────────────────────────────────────────────────
+function HppView({menu,stok,biayaOps,onBack}) {
+const hpp=calcHPP(menu,stok,biayaOps);
+const margins=[10,20,30];
+return (
+<div style={{padding:“16px 20px”}}>
+<div style={{display:“flex”,alignItems:“center”,gap:12,marginBottom:20}}>
+<button onClick={onBack} style={{background:“none”,border:“none”,cursor:“pointer”}}><Icon name="arrow_back" size={22} color="#9ca3af"/></button>
+<div style={{fontSize:16,fontWeight:800,color:”#e2e8f0”}}>HPP · {menu.nama}</div>
+</div>
+<SectionTitle>💰 Rincian Biaya Bahan</SectionTitle>
+{menu.bahan.map(b=>{
+const s=stok[b.bahan_id];
+const biaya=s?Math.round(b.qty*(s.satuan===“pcs”?(s.harga_beli_per_pcs||0):(s.harga_beli_per_gram||0))):0;
+return (
+<div key={b.bahan_id} style={{display:“flex”,justifyContent:“space-between”,padding:“8px 0”,borderBottom:“1px solid #1f1f2e”}}>
+<div>
+<div style={{fontSize:13,fontWeight:700,color:”#e2e8f0”}}>{b.nama}</div>
+<div style={{fontSize:11,color:”#6b7280”}}>{b.satuan===“pcs”?`${b.qty} pcs × ${fmt(s?.harga_beli_per_pcs||0)}/pcs`:`${b.qty}${b.satuan} × ${fmt((s?.harga_beli_per_gram||0)*1000)}/kg`}</div>
+</div>
+<div style={{fontSize:14,fontWeight:700,color:”#94a3b8”}}>{fmt(biaya)}</div>
+</div>
+);
+})}
+<div style={{background:”#1a1a24”,borderRadius:12,padding:“14px”,margin:“16px 0”}}>
+<Row label="Total Bahan" value={fmt(hpp.hpp_bahan)}/>
+{Object.entries(menu.biaya_tambahan||biayaOps).map(([k,v])=><Row key={k} label={`+ ${k}`} value={fmt(v)} small/>)}
+<div style={{height:1,background:”#2a2a3e”,margin:“10px 0”}}/>
+<Row label="HPP Total" value={fmt(hpp.hpp_total)} bold/>
+</div>
+<SectionTitle>📈 Rekomendasi Harga Jual</SectionTitle>
+<div style={{display:“grid”,gridTemplateColumns:“1fr 1fr 1fr”,gap:8}}>
+{margins.map(m=>(
+<div key={m} style={{background:”#1a1a24”,borderRadius:12,padding:“14px 10px”,textAlign:“center”}}>
+<div style={{fontSize:20,fontWeight:900,color:m===20?”#6366f1”:”#e2e8f0”}}>{m}%</div>
+<div style={{fontSize:11,color:”#6b7280”,marginBottom:4}}>Margin</div>
+<div style={{fontSize:14,fontWeight:800,color:”#22c55e”}}>{fmt(Math.round(hpp.hpp_total/(1-m/100)))}</div>
+</div>
+))}
+</div>
+</div>
+);
+}
 
-      const reduceStok = (items) => {
-        setStok(prev => {
-          const next = { ...prev };
-          items.forEach(({ menu_id, qty }) => {
-            const menu = menus.find(m => m.id === menu_id);
-            if (!menu) return;
-            menu.bahan.forEach(b => {
-              if (next[b.bahan_id]) {
-                next[b.bahan_id] = { ...next[b.bahan_id], stok_saat_ini: Math.max(0, next[b.bahan_id].stok_saat_ini - b.qty * qty) };
-              }
-            });
-          });
-          return next;
-        });
-      };
+// ─── STOK PAGE ────────────────────────────────────────────────────────────────
+function StokPage({stok,setStok,allBahan,perlengkapan,setPerlengkapan}) {
+const [subTab,setSubTab]=useState(“bahan”);
+const [selected,setSelected]=useState(””);
+const [inputQty,setInputQty]=useState(””);
+const [inputUnit,setInputUnit]=useState(“gram”);
+const [hargaBeli,setHargaBeli]=useState(””);
+const [tanggalBeli,setTanggalBeli]=useState(new Date().toISOString().slice(0,10));
+const [editId,setEditId]=useState(null);
+const [editVal,setEditVal]=useState(””);
+const [editMax,setEditMax]=useState(””);
+// Perlengkapan form
+const [plNama,setPlNama]=useState(””);
+const [plQty,setPlQty]=useState(””);
+const [plEditId,setPlEditId]=useState(null);
+const [plEditVal,setPlEditVal]=useState(””);
+const bahan=allBahan();
 
-      const addTransaksi = (t) => { reduceStok(t.items); setTransaksi(prev => [t, ...prev]); };
+const selectedStok=stok[selected];
+const satuanDasar=selectedStok?.satuan||(bahan[selected]?.satuan===“pcs”?“pcs”:“gram”);
+const isPcs=satuanDasar===“pcs”;
+const unitOptions=isPcs?[“pcs”,“lusin (12)”,“kodi (20)”,“gross (144)”]:satuanDasar===“ml”?[“ml”,“liter”]:[“gram”,“kg”];
 
-      const tabItems = [
-        { id: "dashboard", label: "Beranda", icon: "dashboard" },
-        { id: "menu", label: "Menu", icon: "food" },
-        { id: "stok", label: "Stok", icon: "stock" },
-        { id: "kasir", label: "Kasir", icon: "cashier" },
-      ];
+const handleSelectBahan=(id)=>{
+setSelected(id);
+const s=stok[id];
+const dasar=s?.satuan||bahan[id]?.satuan||“gram”;
+setInputUnit(dasar===“pcs”?“pcs”:dasar===“ml”?“ml”:“gram”);
+setHargaBeli(s?.harga_beli_per_unit?.toString()||””);
+setInputQty(””);
+};
 
-      const notifCount = notifikasi.length;
-      const tabTitles = { dashboard: "RestoKu", menu: "Manajemen Menu", stok: "Manajemen Stok", kasir: "Kasir" };
+const handleTambahStok=()=>{
+if(!selected||!inputQty||!hargaBeli) return alert(“Lengkapi semua field!”);
+const konversi=UNIT_KONVERSI[inputUnit]||1;
+const qtyDasar=Number(inputQty)*konversi;
+const hargaPerDasar=isPcs?Number(hargaBeli)/konversi:Number(hargaBeli)/(Number(inputQty)*konversi);
+const entryRiwayat={tanggal:tanggalBeli,qty:qtyDasar,satuan:satuanDasar,harga:Number(hargaBeli),unit:inputUnit};
+setStok(prev=>({…prev,[selected]:{…prev[selected],nama:bahan[selected]?.nama||selected,satuan:satuanDasar,stok_awal:(prev[selected]?.stok_awal||0)+qtyDasar,stok_saat_ini:(prev[selected]?.stok_saat_ini||0)+qtyDasar,riwayat:[…(prev[selected]?.riwayat||[]),entryRiwayat],…(isPcs?{harga_beli_per_pcs:Number(hargaBeli)/konversi,harga_beli_per_unit:Number(hargaBeli),unit_nama:inputUnit,unit_qty:konversi}:{harga_beli_per_gram:hargaPerDasar,harga_beli_per_unit:Number(hargaBeli),unit_nama:inputUnit,unit_qty:konversi})}}));
+setInputQty(””);setHargaBeli(””);setSelected(””);
+};
 
-      return (
-        <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", background: "#f5f6fa", minHeight: "100vh", display: "flex", justifyContent: "center" }}>
-          <div style={{ width: "100%", maxWidth: 480, minHeight: "100vh", position: "relative", display: "flex", flexDirection: "column" }}>
+const toDisplayVal=(s,field)=>{const qty=s[field]||0;if(s.satuan===“pcs”) return String(qty);return qty>=1000?String((qty/1000).toFixed(3)):String(qty);};
+const toBaseDasar=(s,val)=>{const num=parseFloat(val);if(s.satuan===“pcs”) return num;return(s.stok_awal>=1000||s.stok_saat_ini>=1000)?num*1000:num;};
+const handleEditStok=(id)=>{const s=stok[id];setEditVal(toDisplayVal(s,“stok_saat_ini”));setEditMax(toDisplayVal(s,“stok_awal”));setEditId(id);};
+const handleSaveEdit=(id)=>{
+const s=stok[id];
+const vT=parseFloat(editVal),vM=parseFloat(editMax);
+if(isNaN(vT)||vT<0) return alert(“Stok tersedia tidak valid!”);
+if(isNaN(vM)||vM<=0) return alert(“Stok maksimal harus > 0!”);
+if(vT>vM) return alert(“Tersedia tidak boleh melebihi maksimal!”);
+setStok(prev=>({…prev,[id]:{…prev[id],stok_saat_ini:toBaseDasar(s,editVal),stok_awal:toBaseDasar(s,editMax)}}));
+setEditId(null);setEditVal(””);setEditMax(””);
+};
+const handleCancelEdit=()=>{setEditId(null);setEditVal(””);setEditMax(””);};
 
-            {/* TOPBAR */}
-            <div style={{ background: "#fff", padding: "16px 20px 14px", borderBottom: "1px solid #eef0f6", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 1px 8px rgba(0,0,0,.05)" }}>
+const displayUnit=(s)=>s.satuan===“pcs”?“pcs”:(s.stok_awal>=1000||s.stok_saat_ini>=1000)?(s.satuan===“gram”?“kg”:“L”):s.satuan;
+
+const previewHarga=()=>{
+if(!inputQty||!hargaBeli) return null;
+const k=UNIT_KONVERSI[inputUnit]||1;
+if(isPcs) return `= ${fmt(Number(hargaBeli)/k)} / pcs`;
+return `= ${fmt(Number(hargaBeli)/(Number(inputQty)*k)*1000)} / kg`;
+};
+
+const handleTambahPerlengkapan=()=>{
+if(!plNama||!plQty) return alert(“Isi nama dan jumlah!”);
+const id=“p”+uid();
+setPerlengkapan(prev=>({…prev,[id]:{nama:plNama,stok_awal:Number(plQty),stok_saat_ini:Number(plQty),satuan:“pcs”}}));
+setPlNama(””);setPlQty(””);
+};
+
+return (
+<div style={{padding:“0 0 16px”}}>
+<div style={{display:“flex”,borderBottom:“1px solid #2a2a3e”,marginBottom:16}}>
+{[[“bahan”,“Bahan”],[“perlengkapan”,“Perlengkapan”]].map(([id,lbl])=>(
+<button key={id} onClick={()=>setSubTab(id)} style={{flex:1,padding:“12px 0”,background:“none”,border:“none”,borderBottom:subTab===id?“2px solid #6366f1”:“2px solid transparent”,color:subTab===id?”#6366f1”:”#6b7280”,fontSize:13,fontWeight:700,cursor:“pointer”}}>{lbl}</button>
+))}
+</div>
+
+```
+  {subTab==="bahan"&&(
+    <div style={{padding:"0 20px"}}>
+      {/* Form tambah stok */}
+      <div style={{background:"#1a1a24",borderRadius:16,padding:"16px",marginBottom:20}}>
+        <div style={{fontSize:13,fontWeight:800,color:"#6366f1",marginBottom:12,letterSpacing:1}}>📦 TAMBAH / UPDATE STOK</div>
+        <FormGroup label="Pilih Bahan (dari Menu)">
+          <select value={selected} onChange={e=>handleSelectBahan(e.target.value)} style={inputStyle}>
+            <option value="">-- Pilih bahan --</option>
+            {Object.entries(bahan).map(([id,b])=><option key={id} value={id}>{b.nama} {b.satuan==="pcs"?"🥚 pcs":`(${b.satuan})`}</option>)}
+          </select>
+        </FormGroup>
+        {selected&&(
+          <>
+            <div style={{background:isPcs?"#1e1b4b":"#0f2a1e",borderRadius:8,padding:"8px 12px",marginBottom:10}}>
+              <span style={{fontSize:12,color:isPcs?"#a5b4fc":"#6ee7b7"}}>{isPcs?"🥚 Per pcs":"⚖️ Per "+satuanDasar}</span>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <FormGroup label="Jumlah Beli"><input type="number" value={inputQty} onChange={e=>setInputQty(e.target.value)} placeholder="0" style={{...inputStyle,marginBottom:0}}/></FormGroup>
+              <FormGroup label="Satuan">
+                <select value={inputUnit} onChange={e=>setInputUnit(e.target.value)} style={{...inputStyle,marginBottom:0}}>
+                  {unitOptions.map(s=><option key={s}>{s}</option>)}
+                </select>
+              </FormGroup>
+            </div>
+            <FormGroup label={`Harga Beli (Rp) per ${inputUnit}`}>
+              <input type="number" value={hargaBeli} onChange={e=>setHargaBeli(e.target.value)} placeholder="30000" style={inputStyle}/>
+            </FormGroup>
+            <FormGroup label="Tanggal Pembelian">
+              <input type="date" value={tanggalBeli} onChange={e=>setTanggalBeli(e.target.value)} style={inputStyle}/>
+            </FormGroup>
+            {previewHarga()&&(
+              <div style={{background:"#0f0f18",borderRadius:8,padding:"8px 12px",marginBottom:10,display:"flex",justifyContent:"space-between"}}>
+                <span style={{fontSize:12,color:"#6b7280"}}>Otomatis:</span>
+                <span style={{fontSize:13,fontWeight:800,color:"#22c55e",fontFamily:"'Space Mono'"}}>{previewHarga()}</span>
+              </div>
+            )}
+          </>
+        )}
+        <button onClick={handleTambahStok} style={{...btnStyle("#6366f1"),width:"100%",justifyContent:"center",padding:"12px",marginTop:4}}>
+          <Icon name="plus" size={16} color="#fff"/> Update Stok
+        </button>
+      </div>
+
+      <SectionTitle>📊 Daftar Stok Bahan</SectionTitle>
+      {Object.entries(stok).map(([id,s])=>{
+        const pct=getStokPersen(s);const w=getStokWarna(pct);const isEditing=editId===id;const du=displayUnit(s);
+        return (
+          <div key={id} style={{background:isEditing?"#1a1a2e":"#1a1a24",borderRadius:14,padding:"14px 16px",marginBottom:10,border:isEditing?"1.5px solid #6366f1":"1.5px solid transparent",transition:"all .2s"}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
               <div>
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "#6366f1", fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", marginBottom: 2 }}>RestoKu</div>
-                <div style={{ fontSize: 20, fontWeight: 900, color: "#1a1d2e", lineHeight: 1.1 }}>{tabTitles[activeTab]}</div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{fontSize:14,fontWeight:800,color:"#e2e8f0"}}>{s.nama}</div>
+                  {s.satuan==="pcs"&&<span style={{fontSize:10,background:"#1e1b4b",color:"#a5b4fc",padding:"1px 6px",borderRadius:10,fontWeight:700}}>PCS</span>}
+                </div>
+                <div style={{fontSize:11,color:"#6b7280"}}>{fmtHargaPerUnit(s)} · Nilai: {fmt(nilaiStok(s))}</div>
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => setShowNotif(!showNotif)}
-                  style={{ position: "relative", width: 44, height: 44, borderRadius: 12, background: notifCount > 0 ? "#fff5f5" : "#f5f6fa", border: notifCount > 0 ? "1.5px solid #fecaca" : "1.5px solid #e4e6ef", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Icon name="bell" size={20} color={notifCount > 0 ? "#ef4444" : "#8b90b0"} />
-                  {notifCount > 0 && <span style={{ position: "absolute", top: 6, right: 6, background: "#ef4444", color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: "50%", width: 14, height: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>{notifCount}</span>}
-                </button>
-                <button onClick={() => setShowReset(true)}
-                  style={{ width: 44, height: 44, borderRadius: 12, background: "#f5f6fa", border: "1.5px solid #e4e6ef", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Icon name="logout" size={18} color="#8b90b0" />
-                </button>
+              <div style={{textAlign:"right",display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
+                <div style={{fontFamily:"'Space Mono'",fontSize:14,color:w.bg,fontWeight:700}}>{pct}%</div>
+                <div style={{fontSize:10,background:w.light,color:w.text,padding:"1px 6px",borderRadius:10,fontWeight:800}}>{w.label}</div>
               </div>
             </div>
-
-            {/* NOTIF PANEL */}
-            {showNotif && (
-              <div style={{ background: "#fff", borderBottom: "1px solid #fecaca", padding: "14px 20px" }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#ef4444", marginBottom: 10, letterSpacing: 1, textTransform: "uppercase" }}>⚠ Stok Kritis</div>
-                {notifCount === 0
-                  ? <div style={{ fontSize: 14, color: "#10b981", fontWeight: 600 }}>✓ Semua stok aman</div>
-                  : notifikasi.map(n => (
-                    <div key={n.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: "#fff5f5", borderRadius: 10, marginBottom: 6, border: "1px solid #fecaca" }}>
-                      <span style={{ fontSize: 14, color: "#991b1b", fontWeight: 700 }}>{n.nama}</span>
-                      <span style={{ fontSize: 13, color: "#ef4444", fontWeight: 800, fontFamily: "'JetBrains Mono'" }}>{n.pct}%</span>
-                    </div>
-                  ))}
-              </div>
+            <div style={{background:"#0f0f18",borderRadius:6,height:8,overflow:"hidden",marginBottom:8}}>
+              <div style={{width:`${pct}%`,height:"100%",background:w.bg,borderRadius:6}}/>
+            </div>
+            {/* Riwayat pembelian */}
+            {(s.riwayat||[]).length>0&&!isEditing&&(
+              <div style={{fontSize:10,color:"#4b5563",marginBottom:6}}>Terakhir beli: {fmtTgl((s.riwayat[s.riwayat.length-1]).tanggal)} · {fmt((s.riwayat[s.riwayat.length-1]).harga)}</div>
             )}
-
-            {/* RESET MODAL */}
-            {showReset && (
-              <div style={{ position: "fixed", inset: 0, background: "rgba(26,29,46,.5)", backdropFilter: "blur(4px)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-                <div style={{ background: "#fff", borderRadius: 20, padding: 28, width: "100%", maxWidth: 340, boxShadow: "0 24px 64px rgba(0,0,0,.15)" }}>
-                  <div style={{ fontSize: 20, fontWeight: 900, color: "#ef4444", marginBottom: 8 }}>⚠️ Reset Data?</div>
-                  <div style={{ fontSize: 14, color: "#4b5280", marginBottom: 24, lineHeight: 1.7 }}>Semua data menu, stok, dan transaksi akan dihapus dan kembali ke data awal. Tindakan ini tidak bisa dibatalkan.</div>
-                  <div style={{ display: "flex", gap: 10 }}>
-                    <button onClick={() => setShowReset(false)} style={{ flex: 1, padding: "14px", background: "#f5f6fa", border: "1.5px solid #e4e6ef", borderRadius: 12, color: "#4b5280", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Batal</button>
-                    <button onClick={clearAllData} style={{ flex: 1, padding: "14px", background: "#ef4444", border: "none", borderRadius: 12, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Ya, Reset</button>
+            {isEditing?(
+              <div style={{marginTop:4}}>
+                <div style={{fontSize:11,color:"#a5b4fc",fontWeight:700,marginBottom:10}}>✏️ Edit Stok</div>
+                <div style={{marginBottom:8}}>
+                  <div style={{fontSize:10,color:"#6b7280",fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:0.5}}>Stok Tersedia</div>
+                  <div style={{display:"flex",alignItems:"center",background:"#0f0f18",borderRadius:10,border:"1.5px solid #6366f1",overflow:"hidden"}}>
+                    <input type="number" value={editVal} onChange={e=>setEditVal(e.target.value)} autoFocus style={{flex:1,background:"transparent",border:"none",padding:"10px 12px",color:"#e2e8f0",fontSize:15,fontWeight:700,outline:"none",fontFamily:"'Space Mono',monospace"}}/>
+                    <span style={{padding:"0 12px",color:"#6366f1",fontSize:13,fontWeight:700}}>{du}</span>
                   </div>
                 </div>
-              </div>
-            )}
-
-            {/* STORAGE INDICATOR */}
-            <div style={{ background: "#f0f1f7", padding: "5px 20px", display: "flex", alignItems: "center", gap: 6 }}>
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981" }} />
-              <span style={{ fontSize: 10, color: "#8b90b0", fontFamily: "'JetBrains Mono'" }}>Data tersimpan di perangkat</span>
-            </div>
-
-            {/* CONTENT */}
-            <div style={{ flex: 1, overflowY: "auto", paddingBottom: "calc(var(--nav-h) + 8px)" }}>
-              {activeTab === "dashboard" && <DashboardPage stok={stok} transaksi={transaksi} menus={menus} />}
-              {activeTab === "menu" && <MenuPage menus={menus} setMenus={setMenus} stok={stok} setStok={setStok} allBahan={allBahan} />}
-              {activeTab === "stok" && <StokPage stok={stok} setStok={setStok} allBahan={allBahan} />}
-              {activeTab === "kasir" && <KasirPage menus={menus} addTransaksi={addTransaksi} stok={stok} />}
-            </div>
-
-            {/* BOTTOM NAV — Mobile */}
-            <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: "#fff", borderTop: "1px solid #eef0f6", display: "flex", zIndex: 100, padding: "8px 0 env(safe-area-inset-bottom, 8px)", boxShadow: "0 -4px 16px rgba(0,0,0,.06)" }}>
-              {tabItems.map(t => {
-                const active = activeTab === t.id;
-                return (
-                  <button key={t.id} onClick={() => setActiveTab(t.id)}
-                    style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", padding: "6px 0 2px", minHeight: 56, position: "relative", WebkitTapHighlightColor: "transparent" }}>
-                    <div style={{ width: 44, height: 30, borderRadius: 99, background: active ? "#eef0ff" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", transition: "background .2s" }}>
-                      <Icon name={t.icon} size={22} color={active ? "#6366f1" : "#b0b4d0"} />
-                    </div>
-                    <span style={{ fontSize: 11, fontWeight: active ? 800 : 600, color: active ? "#6366f1" : "#b0b4d0", letterSpacing: 0.2, transition: "color .2s" }}>{t.label}</span>
-                    {active && <div style={{ position: "absolute", bottom: 0, width: 24, height: 3, background: "#6366f1", borderRadius: "3px 3px 0 0" }} />}
+                <div style={{marginBottom:10}}>
+                  <div style={{fontSize:10,color:"#6b7280",fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:0.5}}>Stok Maksimal <span style={{color:"#4b5563",fontWeight:400,textTransform:"none"}}>(acuan 100%)</span></div>
+                  <div style={{display:"flex",alignItems:"center",background:"#0f0f18",borderRadius:10,border:"1.5px solid #374151",overflow:"hidden"}}>
+                    <input type="number" value={editMax} onChange={e=>setEditMax(e.target.value)} style={{flex:1,background:"transparent",border:"none",padding:"10px 12px",color:"#e2e8f0",fontSize:15,fontWeight:700,outline:"none",fontFamily:"'Space Mono',monospace"}}/>
+                    <span style={{padding:"0 12px",color:"#9ca3af",fontSize:13,fontWeight:700}}>{du}</span>
+                  </div>
+                  {editVal&&editMax&&parseFloat(editVal)>parseFloat(editMax)&&<div style={{fontSize:10,color:"#ef4444",marginTop:4}}>⚠ Tersedia tidak boleh melebihi maksimal</div>}
+                </div>
+                {editVal&&editMax&&parseFloat(editMax)>0&&parseFloat(editVal)<=parseFloat(editMax)&&(
+                  <div style={{background:"#0f0f18",borderRadius:8,padding:"7px 12px",marginBottom:10,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <span style={{fontSize:11,color:"#6b7280"}}>Preview:</span>
+                    <span style={{fontSize:13,fontWeight:800,color:"#22c55e",fontFamily:"'Space Mono'"}}>{Math.round((parseFloat(editVal)/parseFloat(editMax))*100)}%</span>
+                  </div>
+                )}
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={()=>handleSaveEdit(id)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"#22c55e",border:"none",borderRadius:10,padding:"11px",cursor:"pointer",fontSize:13,fontWeight:700,color:"#fff"}}>
+                    <Icon name="check" size={16} color="#fff"/> Simpan
                   </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // ─── DASHBOARD PAGE ───────────────────────────────────────────────────────────
-    function DashboardPage({ stok, transaksi, menus }) {
-      const today = new Date().toDateString();
-      const todayTx = transaksi.filter(t => new Date(t.waktu).toDateString() === today);
-      const totalHarian = todayTx.reduce((a, t) => a + t.total, 0);
-      const totalSemua = transaksi.reduce((a, t) => a + t.total, 0);
-
-      const menuCount = {};
-      transaksi.forEach(t => t.items.forEach(i => {
-        menuCount[i.nama] = (menuCount[i.nama] || 0) + i.qty;
-      }));
-      const terlaris = Object.entries(menuCount).sort((a, b) => b[1] - a[1]).slice(0, 3);
-
-      const porsiData = menus.map(m => ({ ...m, porsi: hitungPorsi(m, stok), bottleneck: bottleneckBahan(m, stok) })).sort((a, b) => a.porsi - b.porsi);
-      const totalPorsi = porsiData.reduce((a, m) => a + m.porsi, 0);
-      const menuHabis = porsiData.filter(m => m.porsi === 0).length;
-      const menuKritis = porsiData.filter(m => m.porsi > 0 && m.porsi <= 5).length;
-      const stokKritis = Object.values(stok).filter(s => getStokPersen(s) < 30).length;
-
-      const rankColors = ["#f59e0b", "#94a3b8", "#cd7c2f"];
-
-      return (
-        <div style={{ padding: "16px 16px 8px" }}>
-
-          {/* HERO CARDS */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
-            <div style={{ background: "linear-gradient(135deg, #6366f1 0%, #818cf8 100%)", borderRadius: 20, padding: "20px 16px", boxShadow: "0 8px 24px #6366f140" }}>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,.75)", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>Penjualan Hari Ini</div>
-              <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 4, lineHeight: 1.2 }}>{fmt(totalHarian)}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <div style={{ width: 18, height: 18, borderRadius: "50%", background: "rgba(255,255,255,.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Icon name="receipt" size={11} color="#fff" />
+                  <button onClick={handleCancelEdit} style={{background:"#2a2a3e",border:"none",borderRadius:10,padding:"11px 16px",cursor:"pointer",display:"flex",alignItems:"center"}}>
+                    <Icon name="close" size={16} color="#9ca3af"/>
+                  </button>
                 </div>
-                <span style={{ fontSize: 11, color: "rgba(255,255,255,.8)", fontWeight: 600 }}>{todayTx.length} transaksi</span>
               </div>
-            </div>
-            <div style={{
-              background: menuHabis > 0
-                ? "linear-gradient(135deg, #ef4444 0%, #f87171 100%)"
-                : menuKritis > 0
-                ? "linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)"
-                : "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
-              borderRadius: 20, padding: "20px 16px",
-              boxShadow: menuHabis > 0 ? "0 8px 24px #ef444440" : menuKritis > 0 ? "0 8px 24px #f59e0b40" : "0 8px 24px #10b98140"
-            }}>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,.75)", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>Kapasitas</div>
-              <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 4 }}>{totalPorsi} porsi</div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,.8)", fontWeight: 600 }}>
-                {menuHabis > 0 ? `⛔ ${menuHabis} menu habis` : menuKritis > 0 ? `⚠ ${menuKritis} hampir habis` : `✓ ${menus.length} menu ok`}
+            ):(
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <span style={{fontSize:13,color:"#9ca3af",fontFamily:"'Space Mono'",fontWeight:700}}>{fmtStokQty(s)}</span>
+                  <span style={{fontSize:11,color:"#4b5563"}}> / {fmtStokQty(s,"stok_awal")}</span>
+                </div>
+                <button onClick={()=>handleEditStok(id)} style={{display:"flex",alignItems:"center",gap:5,background:"#1f1f2e",border:"1px solid #2a2a3e",borderRadius:8,padding:"5px 10px",cursor:"pointer",color:"#9ca3af",fontSize:11,fontWeight:700}}>
+                  <Icon name="edit" size={13} color="#6366f1"/> Edit Stok
+                </button>
               </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  )}
+
+  {subTab==="perlengkapan"&&(
+    <div style={{padding:"0 20px"}}>
+      <div style={{background:"#1a1a24",borderRadius:16,padding:"16px",marginBottom:20}}>
+        <div style={{fontSize:13,fontWeight:800,color:"#6366f1",marginBottom:12}}>📦 TAMBAH PERLENGKAPAN</div>
+        <FormGroup label="Nama Perlengkapan">
+          <input value={plNama} onChange={e=>setPlNama(e.target.value)} placeholder="Sendok plastik, box, dll..." style={inputStyle}/>
+        </FormGroup>
+        <FormGroup label="Jumlah Stok Awal (pcs)">
+          <input type="number" value={plQty} onChange={e=>setPlQty(e.target.value)} placeholder="100" style={inputStyle}/>
+        </FormGroup>
+        <button onClick={handleTambahPerlengkapan} style={{...btnStyle("#6366f1"),width:"100%",justifyContent:"center",padding:"12px"}}>
+          <Icon name="plus" size={16} color="#fff"/> Tambah
+        </button>
+      </div>
+      <SectionTitle>📋 Daftar Perlengkapan</SectionTitle>
+      {Object.entries(perlengkapan).length===0?<EmptyState text="Belum ada perlengkapan"/>:Object.entries(perlengkapan).map(([id,p])=>{
+        const pct=p.stok_awal>0?Math.round((p.stok_saat_ini/p.stok_awal)*100):0;
+        const w=getStokWarna(pct);
+        const isEditing=plEditId===id;
+        return (
+          <div key={id} style={{background:"#1a1a24",borderRadius:14,padding:"14px 16px",marginBottom:10}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+              <div style={{fontSize:14,fontWeight:800,color:"#e2e8f0"}}>{p.nama}</div>
+              <div style={{fontFamily:"'Space Mono'",fontSize:14,color:w.bg,fontWeight:700}}>{pct}%</div>
             </div>
+            <div style={{background:"#0f0f18",borderRadius:6,height:8,overflow:"hidden",marginBottom:8}}>
+              <div style={{width:`${pct}%`,height:"100%",background:w.bg,borderRadius:6}}/>
+            </div>
+            {isEditing?(
+              <div style={{display:"flex",gap:8}}>
+                <input type="number" value={plEditVal} onChange={e=>setPlEditVal(e.target.value)} autoFocus style={{...inputStyle,flex:1,marginBottom:0,fontFamily:"'Space Mono'",fontWeight:700}}/>
+                <button onClick={()=>{setPerlengkapan(prev=>({...prev,[id]:{...prev[id],stok_saat_ini:Number(plEditVal)}}));setPlEditId(null);}} style={{background:"#22c55e",border:"none",borderRadius:10,padding:"10px 14px",cursor:"pointer",display:"flex",alignItems:"center"}}><Icon name="check" size={16} color="#fff"/></button>
+                <button onClick={()=>setPlEditId(null)} style={{background:"#2a2a3e",border:"none",borderRadius:10,padding:"10px 14px",cursor:"pointer",display:"flex",alignItems:"center"}}><Icon name="close" size={16} color="#9ca3af"/></button>
+              </div>
+            ):(
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{fontSize:13,color:"#9ca3af",fontFamily:"'Space Mono'"}}>{p.stok_saat_ini} / {p.stok_awal} pcs</span>
+                <div style={{display:"flex",gap:6}}>
+                  <button onClick={()=>{setPlEditId(id);setPlEditVal(String(p.stok_saat_ini));}} style={{display:"flex",alignItems:"center",gap:5,background:"#1f1f2e",border:"1px solid #2a2a3e",borderRadius:8,padding:"5px 10px",cursor:"pointer",fontSize:11,fontWeight:700,color:"#9ca3af"}}><Icon name="edit" size={13} color="#6366f1"/> Edit</button>
+                  <button onClick={()=>setPerlengkapan(prev=>{const n={...prev};delete n[id];return n;})} style={{background:"none",border:"none",cursor:"pointer",padding:4}}><Icon name="trash" size={16} color="#4b5563"/></button>
+                </div>
+              </div>
+            )}
           </div>
+        );
+      })}
+    </div>
+  )}
+</div>
+```
 
-          {/* STATS ROW */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
-            {[
-              { label: "Total Omzet", val: fmt(totalSemua), color: "#6366f1" },
-              { label: "Stok Kritis", val: `${stokKritis} item`, color: stokKritis > 0 ? "#ef4444" : "#10b981" },
-              { label: "Menu Aktif", val: `${menus.length} menu`, color: "#10b981" },
-            ].map(s => (
-              <Card key={s.label} style={{ padding: "14px 12px", textAlign: "center" }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: s.color, marginBottom: 4, lineHeight: 1.2 }}>{s.val}</div>
-                <div style={{ fontSize: 10, fontWeight: 600, color: "#8b90b0", lineHeight: 1.3 }}>{s.label}</div>
-              </Card>
-            ))}
+);
+}
+
+// ─── KASIR PAGE ───────────────────────────────────────────────────────────────
+function KasirPage({menus,paket,addTransaksi,stok,perlengkapan}) {
+const [cart,setCart]=useState([]);
+const [bayar,setBayar]=useState(””);
+const [tipe,setTipe]=useState(“dine-in”);
+const [selectedPerlengkapan,setSelectedPerlengkapan]=useState([]);
+const [lastTx,setLastTx]=useState(null);
+const [showStruk,setShowStruk]=useState(false);
+const [kasirTab,setKasirTab]=useState(“menu”);
+
+const total=cart.reduce((a,i)=>a+i.harga*i.qty,0);
+const kembalian=Number(bayar)-total;
+
+const addToCart=(item,harga,id,jenis)=>{
+setCart(prev=>{
+const found=prev.find(i=>i.menu_id===id);
+if(found) return prev.map(i=>i.menu_id===id?{…i,qty:i.qty+1}:i);
+return […prev,{menu_id:id,nama:item,harga,qty:1,jenis:jenis||“menu”}];
+});
+};
+const changeQty=(menu_id,delta)=>setCart(prev=>prev.map(i=>i.menu_id===menu_id?{…i,qty:Math.max(0,i.qty+delta)}:i).filter(i=>i.qty>0));
+const togglePerlengkapan=(id)=>setSelectedPerlengkapan(prev=>prev.includes(id)?prev.filter(x=>x!==id):[…prev,id]);
+
+const handleBayar=()=>{
+if(cart.length===0) return alert(“Keranjang kosong!”);
+if(Number(bayar)<total) return alert(“Bayar kurang!”);
+const tx={id:“t”+uid(),waktu:new Date().toISOString(),items:cart.map(i=>({…i,perlengkapan_ids:tipe===“takeaway”?selectedPerlengkapan:[]})),total,bayar:Number(bayar),kembalian,tipe};
+addTransaksi(tx);
+setLastTx(tx);
+setShowStruk(true);
+setCart([]);setBayar(””);setSelectedPerlengkapan([]);
+};
+
+if(showStruk&&lastTx) return <StrukPage tx={lastTx} menus={menus} paket={paket} onClose={()=>setShowStruk(false)}/>;
+
+const kategoris=[…new Set(menus.map(m=>m.kategori))];
+
+return (
+<div style={{padding:“0”}}>
+{/* Tipe order */}
+<div style={{display:“flex”,gap:8,padding:“12px 20px 0”,marginBottom:8}}>
+{[[“dine-in”,“Dine In”],[“takeaway”,“Take Away”]].map(([v,l])=>(
+<button key={v} onClick={()=>setTipe(v)} style={{flex:1,padding:“8px”,borderRadius:10,border:“1.5px solid”,borderColor:tipe===v?”#6366f1”:”#2a2a3e”,background:tipe===v?”#1e1b4b”:”#1a1a24”,color:tipe===v?”#a5b4fc”:”#6b7280”,fontSize:13,fontWeight:700,cursor:“pointer”}}>{l}</button>
+))}
+</div>
+
+```
+  {/* Menu/Paket tabs */}
+  <div style={{display:"flex",borderBottom:"1px solid #2a2a3e",margin:"0 0 0"}}>
+    {[["menu","Menu"],["paket","Paket"]].map(([id,lbl])=>(
+      <button key={id} onClick={()=>setKasirTab(id)} style={{flex:1,padding:"10px 0",background:"none",border:"none",borderBottom:kasirTab===id?"2px solid #6366f1":"2px solid transparent",color:kasirTab===id?"#6366f1":"#6b7280",fontSize:13,fontWeight:700,cursor:"pointer"}}>{lbl}</button>
+    ))}
+  </div>
+
+  <div style={{padding:"12px 20px 8px"}}>
+    {kasirTab==="menu"&&kategoris.map(kat=>(
+      <div key={kat} style={{marginBottom:16}}>
+        <div style={{fontSize:11,fontWeight:800,color:"#6366f1",letterSpacing:2,textTransform:"uppercase",marginBottom:8}}>{kat}</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          {menus.filter(m=>m.kategori===kat).map(menu=>{
+            const inCart=cart.find(i=>i.menu_id===menu.id);
+            return (
+              <button key={menu.id} onClick={()=>addToCart(menu.nama,menu.harga_jual,menu.id,"menu")} style={{background:inCart?"#1e1b4b":"#1a1a24",border:inCart?"1.5px solid #6366f1":"1.5px solid transparent",borderRadius:14,padding:"14px 12px",textAlign:"left",cursor:"pointer",position:"relative",transition:"all .15s"}}>
+                {inCart&&<div style={{position:"absolute",top:8,right:8,background:"#6366f1",color:"#fff",fontSize:11,fontWeight:800,borderRadius:20,padding:"1px 7px"}}>{inCart.qty}×</div>}
+                <div style={{fontSize:13,fontWeight:800,color:"#e2e8f0",marginBottom:4,lineHeight:1.2}}>{menu.nama}</div>
+                <div style={{fontSize:14,fontWeight:900,color:"#22c55e"}}>{fmt(menu.harga_jual)}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    ))}
+    {kasirTab==="paket"&&(
+      paket.length===0?<EmptyState text="Belum ada paket dibuat"/>:
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+        {paket.map(p=>{
+          const inCart=cart.find(i=>i.menu_id===p.id);
+          return (
+            <button key={p.id} onClick={()=>addToCart(p.nama,p.harga_jual,p.id,"paket")} style={{background:inCart?"#1e1b4b":"#1a1a24",border:inCart?"1.5px solid #6366f1":"1.5px solid transparent",borderRadius:14,padding:"14px 12px",textAlign:"left",cursor:"pointer",position:"relative"}}>
+              {inCart&&<div style={{position:"absolute",top:8,right:8,background:"#6366f1",color:"#fff",fontSize:11,fontWeight:800,borderRadius:20,padding:"1px 7px"}}>{inCart.qty}×</div>}
+              <div style={{fontSize:11,background:"#6366f1",color:"#fff",padding:"1px 6px",borderRadius:8,fontWeight:700,marginBottom:4,display:"inline-block"}}>PAKET</div>
+              <div style={{fontSize:13,fontWeight:800,color:"#e2e8f0",marginBottom:4,lineHeight:1.2}}>{p.nama}</div>
+              <div style={{fontSize:14,fontWeight:900,color:"#22c55e"}}>{fmt(p.harga_jual)}</div>
+            </button>
+          );
+        })}
+      </div>
+    )}
+  </div>
+
+  {/* Take away perlengkapan */}
+  {tipe==="takeaway"&&Object.keys(perlengkapan).length>0&&(
+    <div style={{padding:"8px 20px",background:"#111118",borderTop:"1px solid #1f1f2e",borderBottom:"1px solid #1f1f2e"}}>
+      <div style={{fontSize:11,fontWeight:800,color:"#f59e0b",marginBottom:8,letterSpacing:1,textTransform:"uppercase"}}>🥡 Pilih Perlengkapan (Take Away)</div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+        {Object.entries(perlengkapan).map(([id,p])=>{
+          const sel=selectedPerlengkapan.includes(id);
+          return (
+            <button key={id} onClick={()=>togglePerlengkapan(id)} style={{padding:"5px 12px",borderRadius:20,border:"1.5px solid",borderColor:sel?"#f59e0b":"#2a2a3e",background:sel?"#1a1400":"#1a1a24",color:sel?"#fbbf24":"#6b7280",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+              {sel?"✓ ":""}{p.nama} ({p.stok_saat_ini})
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  )}
+
+  {/* Cart */}
+  {cart.length>0&&(
+    <div style={{background:"#1a1a24",borderTop:"1px solid #2a2a3e",padding:"16px 20px"}}>
+      <div style={{fontSize:12,fontWeight:800,color:"#6b7280",marginBottom:10,letterSpacing:1,textTransform:"uppercase"}}>🛒 Pesanan</div>
+      {cart.map(item=>(
+        <div key={item.menu_id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div style={{flex:1}}>
+            <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{item.nama}</div>
+            <div style={{fontSize:12,color:"#9ca3af"}}>{fmt(item.harga)} × {item.qty}</div>
           </div>
-
-          {/* PORSI PER MENU */}
-          <SectionTitle>🍽 Estimasi Porsi</SectionTitle>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-            {porsiData.map(m => {
-              const porsiMax = Math.max(...porsiData.map(x => x.porsi), 1);
-              const pct = Math.round((m.porsi / porsiMax) * 100);
-              const color = m.porsi === 0 ? "#ef4444" : m.porsi <= 5 ? "#f59e0b" : "#10b981";
-              const bg = m.porsi === 0 ? "#fef2f2" : m.porsi <= 5 ? "#fffbeb" : "#ecfdf5";
-              const textColor = m.porsi === 0 ? "#991b1b" : m.porsi <= 5 ? "#92400e" : "#065f46";
-              const label = m.porsi === 0 ? "Habis" : m.porsi <= 5 ? "Hampir habis" : "Tersedia";
-              return (
-                <Card key={m.id} style={{ padding: "14px 16px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: "#1a1d2e", marginBottom: 3 }}>{m.nama}</div>
-                      <div style={{ fontSize: 11, color: "#8b90b0" }}>
-                        {m.porsi === 0 ? `⛔ Kurang: ${m.bottleneck}` : m.porsi <= 5 ? `⚠ Hampir habis · ${m.bottleneck}` : `Bahan min: ${m.bottleneck}`}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 22, fontWeight: 700, color, lineHeight: 1 }}>{m.porsi}</div>
-                      <Badge text={label} color={textColor} bg={bg} />
-                    </div>
-                  </div>
-                  <ProgressBar pct={pct} color={color} thin />
-                </Card>
-              );
-            })}
-          </div>
-
-          {/* STOK STATUS */}
-          <SectionTitle>📦 Status Stok</SectionTitle>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-            {Object.entries(stok).map(([id, s]) => {
-              const pct = getStokPersen(s);
-              const w = getStokWarna(pct);
-              return (
-                <Card key={id} style={{ padding: "14px 16px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: "#1a1d2e" }}>{s.nama}</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <Badge text={w.label} color={w.text} bg={w.light} />
-                      <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 13, color: w.bg, fontWeight: 700 }}>{pct}%</span>
-                    </div>
-                  </div>
-                  <ProgressBar pct={pct} color={w.bg} />
-                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-                    <span style={{ fontSize: 11, color: "#4b5280", fontWeight: 600 }}>{fmtStokQty(s)}</span>
-                    <span style={{ fontSize: 11, color: "#8b90b0" }}>dari {fmtStokQty(s, "stok_awal")}</span>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-
-          {/* TERLARIS */}
-          <SectionTitle>🔥 Menu Terlaris</SectionTitle>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-            {terlaris.length === 0
-              ? <EmptyState icon="food" text="Belum ada transaksi" />
-              : terlaris.map(([nama, qty], i) => (
-                <Card key={nama} style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 14 }}>
-                  <div style={{ width: 34, height: 34, background: rankColors[i] || "#e4e6ef", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'JetBrains Mono'", fontSize: 14, fontWeight: 700, color: "#fff", flexShrink: 0 }}>{i + 1}</div>
-                  <div style={{ flex: 1, fontSize: 14, fontWeight: 700, color: "#1a1d2e" }}>{nama}</div>
-                  <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 14, color: "#6366f1", fontWeight: 700 }}>{qty}×</div>
-                </Card>
-              ))}
-          </div>
-
-          {/* TRANSAKSI TERAKHIR */}
-          <SectionTitle>🧾 Transaksi Terakhir</SectionTitle>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 }}>
-            {transaksi.length === 0
-              ? <EmptyState icon="receipt" text="Belum ada transaksi" />
-              : transaksi.slice(0, 5).map(t => (
-                <Card key={t.id} style={{ padding: "12px 16px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span style={{ fontSize: 12, color: "#8b90b0", fontFamily: "'JetBrains Mono'" }}>{new Date(t.waktu).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}</span>
-                    <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 14, fontWeight: 700, color: "#10b981" }}>{fmt(t.total)}</span>
-                  </div>
-                  <div style={{ fontSize: 12, color: "#4b5280", fontWeight: 600 }}>{t.items.map(i => `${i.nama} ×${i.qty}`).join(", ")}</div>
-                </Card>
-              ))}
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{fontSize:13,fontWeight:800,color:"#22c55e",marginRight:8}}>{fmt(item.harga*item.qty)}</div>
+            <button onClick={()=>changeQty(item.menu_id,-1)} style={{width:26,height:26,borderRadius:8,background:"#2a2a3e",border:"none",cursor:"pointer",color:"#e2e8f0",fontSize:16,fontWeight:700}}>−</button>
+            <span style={{fontSize:14,fontWeight:800,color:"#e2e8f0",minWidth:20,textAlign:"center"}}>{item.qty}</span>
+            <button onClick={()=>changeQty(item.menu_id,1)} style={{width:26,height:26,borderRadius:8,background:"#6366f1",border:"none",cursor:"pointer",color:"#fff",fontSize:16,fontWeight:700}}>+</button>
           </div>
         </div>
-      );
-    }
-
-    // ─── MENU PAGE ────────────────────────────────────────────────────────────────
-    function MenuPage({ menus, setMenus, stok, setStok, allBahan }) {
-      const [view, setView] = useState("list");
-      const [editMenu, setEditMenu] = useState(null);
-      const [hppView, setHppView] = useState(null);
-
-      const deleteMenu = (id) => setMenus(prev => prev.filter(m => m.id !== id));
-      const saveMenu = (menu) => {
-        if (menu.id && menus.find(m => m.id === menu.id)) {
-          setMenus(prev => prev.map(m => m.id === menu.id ? menu : m));
-        } else {
-          setMenus(prev => [...prev, { ...menu, id: "m" + uid() }]);
-        }
-        const newBahan = {};
-        [...menus, menu].forEach(m => m.bahan.forEach(b => {
-          if (!stok[b.bahan_id] && !newBahan[b.bahan_id]) {
-            newBahan[b.bahan_id] = { nama: b.nama, stok_awal: 0, stok_saat_ini: 0, satuan: b.satuan, harga_beli_per_gram: 0, harga_beli_per_unit: 0, unit_qty: 1000 };
-          }
-        }));
-        if (Object.keys(newBahan).length > 0) setStok(prev => ({ ...prev, ...newBahan }));
-        setView("list");
-        setEditMenu(null);
-      };
-
-      if (hppView) return <HppView menu={hppView} stok={stok} onBack={() => setHppView(null)} />;
-      if (view === "form") return <MenuForm menu={editMenu} stok={stok} onSave={saveMenu} onBack={() => { setView("list"); setEditMenu(null); }} />;
-
-      const kategoris = [...new Set(menus.map(m => m.kategori))];
-
-      return (
-        <div style={{ padding: "16px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#8b90b0" }}>{menus.length} menu terdaftar</span>
-            <button onClick={() => { setEditMenu(null); setView("form"); }} style={btnPrimary()}>
-              <Icon name="plus" size={18} color="#fff" /> Tambah Menu
-            </button>
+      ))}
+      <div style={{height:1,background:"#2a2a3e",margin:"12px 0"}}/>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}>
+        <span style={{fontSize:15,fontWeight:800,color:"#e2e8f0"}}>Total</span>
+        <span style={{fontSize:18,fontWeight:900,color:"#22c55e",fontFamily:"'Space Mono'"}}>{fmt(total)}</span>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+        <FormGroup label="Bayar (Rp)">
+          <input type="number" value={bayar} onChange={e=>setBayar(e.target.value)} placeholder={total.toString()} style={{...inputStyle,marginBottom:0}}/>
+        </FormGroup>
+        <FormGroup label="Kembalian">
+          <div style={{background:"#0f0f18",borderRadius:10,padding:"11px 14px",fontSize:14,fontWeight:800,color:kembalian>=0&&bayar?"#22c55e":"#ef4444",border:"1.5px solid #1f1f2e"}}>
+            {bayar?fmt(Math.max(0,kembalian)):"–"}
           </div>
+        </FormGroup>
+      </div>
+      <button onClick={handleBayar} style={{...btnStyle("#22c55e"),width:"100%",justifyContent:"center",padding:"14px",fontSize:15}}>
+        <Icon name="check" size={20} color="#fff"/> Proses Pembayaran
+      </button>
+    </div>
+  )}
+</div>
+```
 
-          {kategoris.map(kat => (
-            <div key={kat} style={{ marginBottom: 24 }}>
-              <SectionTitle>{kat}</SectionTitle>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {menus.filter(m => m.kategori === kat).map(menu => {
-                  const hpp = calcHPP(menu, stok);
-                  const margin = menu.harga_jual > 0 ? Math.round(((menu.harga_jual - hpp.hpp_total) / menu.harga_jual) * 100) : 0;
-                  return (
-                    <Card key={menu.id} style={{ padding: "16px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                        <div>
-                          <div style={{ fontSize: 16, fontWeight: 800, color: "#1a1d2e", marginBottom: 4 }}>{menu.nama}</div>
-                          <div style={{ fontSize: 12, color: "#8b90b0" }}>{menu.bahan.length} bahan · HPP {fmt(hpp.hpp_total)}</div>
-                        </div>
-                        <div style={{ textAlign: "right" }}>
-                          <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 16, fontWeight: 700, color: "#10b981" }}>{fmt(menu.harga_jual)}</div>
-                          <Badge text={`${margin}% margin`} color={margin >= 20 ? "#065f46" : "#92400e"} bg={margin >= 20 ? "#ecfdf5" : "#fffbeb"} />
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
-                        {menu.bahan.map(b => (
-                          <span key={b.bahan_id} style={{ fontSize: 11, background: "#f5f6fa", color: "#4b5280", padding: "4px 10px", borderRadius: 20, border: "1px solid #e4e6ef", fontWeight: 600 }}>
-                            {b.nama} {b.qty}{b.satuan}
-                          </span>
-                        ))}
-                      </div>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <button onClick={() => setHppView(menu)} style={{ ...btnSecondary, fontSize: 12, padding: "10px 14px", minHeight: 40 }}>
-                          <Icon name="trending" size={14} color="#6366f1" /> HPP
-                        </button>
-                        <button onClick={() => { setEditMenu(menu); setView("form"); }} style={{ ...btnSecondary, fontSize: 12, padding: "10px 14px", minHeight: 40 }}>
-                          <Icon name="edit" size={14} color="#4b5280" /> Edit
-                        </button>
-                        <button onClick={() => deleteMenu(menu.id)} style={{ ...btnDanger, fontSize: 12, padding: "10px 14px", minHeight: 40 }}>
-                          <Icon name="trash" size={14} color="#ef4444" /> Hapus
-                        </button>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
+);
+}
+
+// ─── STRUK PAGE ───────────────────────────────────────────────────────────────
+function StrukPage({tx,menus,paket,onClose}) {
+const namaRestoran=“RestoKu”;
+const struktRef=React.useRef?React.useRef(null):null;
+
+const printStruk=async()=>{
+// Web Bluetooth Print — mencoba connect ke printer thermal BT
+if(!navigator.bluetooth){alert(“Browser ini tidak mendukung Bluetooth. Gunakan Chrome di Android/desktop.”);return;}
+try{
+const device=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[“000018f0-0000-1000-8000-00805f9b34fb”]});
+const server=await device.gatt.connect();
+const service=await server.getPrimaryService(“000018f0-0000-1000-8000-00805f9b34fb”);
+const char=await service.getCharacteristic(“00002af1-0000-1000-8000-00805f9b34fb”);
+const enc=new TextEncoder();
+const lines=[
+“\x1B\x40”,”\x1B\x61\x01”,
+`${namaRestoran}\n`,”\x1B\x61\x00”,
+“================================\n”,
+`${fmtTgl(tx.waktu)} ${fmtJam(tx.waktu)}\n`,
+`Order: ${tx.tipe==="takeaway"?"Take Away":"Dine In"}\n`,
+“––––––––––––––––\n”,
+…tx.items.map(i=>`${i.nama}\n  ${i.qty} x ${fmt(i.harga).replace("Rp\xa0","Rp ")} = ${fmt(i.harga*i.qty).replace("Rp\xa0","Rp ")}\n`),
+“================================\n”,
+`TOTAL : ${fmt(tx.total).replace("Rp\xa0","Rp ")}\n`,
+`BAYAR : ${fmt(tx.bayar).replace("Rp\xa0","Rp ")}\n`,
+`KEMBALIAN: ${fmt(tx.kembalian).replace("Rp\xa0","Rp ")}\n`,
+“================================\n”,
+“   Terima kasih!\n\n\n”,”\x1D\x56\x00”
+];
+for(const line of lines){await char.writeValue(enc.encode(line));}
+alert(“Struk berhasil dikirim ke printer!”);
+}catch(e){
+if(e.name===“NotFoundError”) alert(“Printer tidak dipilih.”);
+else alert(“Gagal print: “+e.message+”\n\nPastikan printer thermal BT menyala dan dalam jangkauan.”);
+}
+};
+
+return (
+<div style={{padding:“0 20px 24px”}}>
+<div style={{display:“flex”,alignItems:“center”,gap:12,padding:“16px 0”,borderBottom:“1px solid #2a2a3e”,marginBottom:16}}>
+<button onClick={onClose} style={{background:“none”,border:“none”,cursor:“pointer”}}><Icon name="arrow_back" size={22} color="#9ca3af"/></button>
+<div style={{fontSize:16,fontWeight:800,color:”#e2e8f0”}}>Struk Transaksi</div>
+</div>
+
+```
+  {/* Struk visual */}
+  <div ref={struktRef} style={{background:"#fff",borderRadius:16,padding:"20px",color:"#111",fontFamily:"'Space Mono',monospace",fontSize:13,marginBottom:16}}>
+    <div style={{textAlign:"center",fontWeight:700,fontSize:16,marginBottom:2}}>{namaRestoran}</div>
+    <div style={{textAlign:"center",fontSize:11,color:"#555",marginBottom:12}}>{fmtTgl(tx.waktu)} · {fmtJam(tx.waktu)} · {tx.tipe==="takeaway"?"Take Away":"Dine In"}</div>
+    <div style={{borderTop:"1px dashed #ccc",borderBottom:"1px dashed #ccc",padding:"8px 0",margin:"0 0 8px"}}>
+      {tx.items.map((item,i)=>(
+        <div key={i} style={{marginBottom:6}}>
+          <div style={{fontSize:12,fontWeight:700}}>{item.nama}</div>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#555"}}>
+            <span>{item.qty} × {fmt(item.harga)}</span>
+            <span style={{fontWeight:700,color:"#111"}}>{fmt(item.harga*item.qty)}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+    <div style={{display:"flex",justifyContent:"space-between",fontWeight:700,fontSize:14,margin:"8px 0 4px"}}><span>Total</span><span>{fmt(tx.total)}</span></div>
+    <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#555"}}><span>Bayar</span><span>{fmt(tx.bayar)}</span></div>
+    <div style={{display:"flex",justifyContent:"space-between",fontWeight:700,fontSize:13,color:"#15803d"}}><span>Kembalian</span><span>{fmt(tx.kembalian)}</span></div>
+    <div style={{textAlign:"center",fontSize:11,color:"#888",marginTop:12}}>— Terima kasih! —</div>
+  </div>
+
+  <div style={{display:"flex",flexDirection:"column",gap:10}}>
+    <button onClick={printStruk} style={{...btnStyle("#6366f1"),width:"100%",justifyContent:"center",padding:"14px",fontSize:14}}>
+      <Icon name="print" size={18} color="#fff"/> Print ke Printer Thermal BT
+    </button>
+    <div style={{background:"#1a1a24",borderRadius:12,padding:"12px 14px"}}>
+      <div style={{fontSize:12,color:"#6b7280",lineHeight:1.7}}>
+        💡 <strong style={{color:"#9ca3af"}}>Cara connect printer:</strong> Pastikan printer Bluetooth menyala → klik tombol Print → pilih printer dari daftar → struk terkirim otomatis.<br/><br/>
+        Printer yang didukung: ESC/POS thermal printers (Epson, GOOJPRT, XPrinter, dll) via Web Bluetooth API. Gunakan <strong style={{color:"#9ca3af"}}>Chrome</strong> di Android atau desktop untuk fitur ini.
+      </div>
+    </div>
+    <button onClick={onClose} style={{...btnStyle("#2a2a3e"),width:"100%",justifyContent:"center",padding:"12px",fontSize:13}}>
+      Kembali ke Kasir
+    </button>
+  </div>
+</div>
+```
+
+);
+}
+
+// ─── LAPORAN PAGE ─────────────────────────────────────────────────────────────
+function LaporanPage({transaksi,menus,paket}) {
+const [periode,setPeriode]=useState(“harian”);
+const [tglFilter,setTglFilter]=useState(new Date().toISOString().slice(0,10));
+const [bulanFilter,setBulanFilter]=useState(new Date().toISOString().slice(0,7));
+
+const filterTx=(txList)=>{
+if(periode===“harian”) return txList.filter(t=>t.waktu.slice(0,10)===tglFilter);
+if(periode===“mingguan”){
+const base=new Date(tglFilter);base.setDate(base.getDate()-base.getDay());
+const end=new Date(base);end.setDate(end.getDate()+6);
+return txList.filter(t=>{const d=new Date(t.waktu);return d>=base&&d<=end;});
+}
+if(periode===“bulanan”) return txList.filter(t=>t.waktu.slice(0,7)===bulanFilter);
+return txList;
+};
+const filtered=filterTx(transaksi);
+const totalPendapatan=filtered.reduce((a,t)=>a+t.total,0);
+const totalTransaksi=filtered.length;
+const rataPerTx=totalTransaksi>0?Math.round(totalPendapatan/totalTransaksi):0;
+
+// Menu terlaris dalam periode
+const menuCount={};
+filtered.forEach(t=>t.items.forEach(i=>{menuCount[i.nama]=(menuCount[i.nama]||0)+i.qty;}));
+const terlaris=Object.entries(menuCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+// Pendapatan per hari (untuk grafik mini)
+const perHari={};
+filtered.forEach(t=>{const d=t.waktu.slice(0,10);perHari[d]=(perHari[d]||0)+t.total;});
+const hariEntries=Object.entries(perHari).sort(([a],[b])=>a>b?1:-1);
+const maxHari=Math.max(…Object.values(perHari),1);
+
+return (
+<div style={{padding:“16px 20px”}}>
+{/* Periode selector */}
+<div style={{display:“flex”,gap:6,marginBottom:16}}>
+{[[“harian”,“Harian”],[“mingguan”,“Mingguan”],[“bulanan”,“Bulanan”]].map(([v,l])=>(
+<button key={v} onClick={()=>setPeriode(v)} style={{flex:1,padding:“8px 4px”,borderRadius:10,border:“1.5px solid”,borderColor:periode===v?”#6366f1”:”#2a2a3e”,background:periode===v?”#1e1b4b”:”#1a1a24”,color:periode===v?”#a5b4fc”:”#6b7280”,fontSize:12,fontWeight:700,cursor:“pointer”}}>{l}</button>
+))}
+</div>
+
+```
+  {/* Filter tanggal */}
+  <div style={{marginBottom:16}}>
+    {(periode==="harian"||periode==="mingguan")&&(
+      <input type="date" value={tglFilter} onChange={e=>setTglFilter(e.target.value)} style={inputStyle}/>
+    )}
+    {periode==="bulanan"&&(
+      <input type="month" value={bulanFilter} onChange={e=>setBulanFilter(e.target.value)} style={inputStyle}/>
+    )}
+  </div>
+
+  {/* Summary cards */}
+  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
+    <Card bg="linear-gradient(135deg,#6366f1,#8b5cf6)">
+      <div style={{fontSize:10,color:"rgba(255,255,255,.7)",fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Total Pendapatan</div>
+      <div style={{fontSize:20,fontWeight:900,color:"#fff",marginTop:4}}>{fmt(totalPendapatan)}</div>
+      <div style={{fontSize:11,color:"rgba(255,255,255,.6)",marginTop:2}}>{totalTransaksi} transaksi</div>
+    </Card>
+    <Card bg="linear-gradient(135deg,#0f766e,#0d9488)">
+      <div style={{fontSize:10,color:"rgba(255,255,255,.7)",fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Rata-rata / Transaksi</div>
+      <div style={{fontSize:20,fontWeight:900,color:"#fff",marginTop:4}}>{fmt(rataPerTx)}</div>
+      <div style={{fontSize:11,color:"rgba(255,255,255,.6)",marginTop:2}}>{terlaris.length>0?`Top: ${terlaris[0][0]}`:"Belum ada"}</div>
+    </Card>
+  </div>
+
+  {/* Bar chart pendapatan per hari */}
+  {hariEntries.length>0&&(
+    <>
+      <SectionTitle>📈 Pendapatan Harian</SectionTitle>
+      <div style={{background:"#1a1a24",borderRadius:14,padding:"14px 16px",marginBottom:20}}>
+        <div style={{display:"flex",alignItems:"flex-end",gap:4,height:80}}>
+          {hariEntries.map(([tgl,val])=>(
+            <div key={tgl} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+              <div style={{width:"100%",background:"#6366f1",borderRadius:"4px 4px 0 0",height:`${Math.round((val/maxHari)*70)+4}px`,minHeight:4,opacity:0.85}}/>
+              <div style={{fontSize:9,color:"#4b5563",textAlign:"center",lineHeight:1}}>{tgl.slice(5)}</div>
             </div>
           ))}
         </div>
-      );
-    }
+      </div>
+    </>
+  )}
 
-    function MenuForm({ menu, stok, onSave, onBack }) {
-      const [nama, setNama] = useState(menu?.nama || "");
-      const [kategori, setKategori] = useState(menu?.kategori || "Makanan");
-      const [harga, setHarga] = useState(menu?.harga_jual || "");
-      const [bahan, setBahan] = useState(menu?.bahan || [{ bahan_id: "b" + uid(), nama: "", qty: "", satuan: "gram" }]);
-      const [biaya, setBiaya] = useState(menu?.biaya_tambahan || { listrik: 500, gas: 300, air: 100, labor: 2000 });
-
-      const bahanExisting = Object.entries(stok || {}).map(([id, s]) => ({ bahan_id: id, nama: s.nama, satuan: s.satuan }));
-      const addBahan = () => setBahan(prev => [...prev, { bahan_id: "b" + uid(), nama: "", qty: "", satuan: "gram", isNew: true }]);
-      const removeBahan = (i) => setBahan(prev => prev.filter((_, idx) => idx !== i));
-      const updateBahan = (i, field, val) => setBahan(prev => prev.map((b, idx) => idx === i ? { ...b, [field]: val } : b));
-      const pilihBahanExisting = (i, bahanId) => {
-        if (!bahanId) return;
-        const found = bahanExisting.find(b => b.bahan_id === bahanId);
-        if (!found) return;
-        setBahan(prev => prev.map((b, idx) => idx === i ? { ...b, bahan_id: found.bahan_id, nama: found.nama, satuan: found.satuan, isNew: false } : b));
-      };
-      const handleSave = () => {
-        if (!nama || bahan.some(b => !b.nama || !b.qty)) return alert("Lengkapi semua field!");
-        onSave({ ...menu, nama, kategori, harga_jual: Number(harga), bahan: bahan.map(b => ({ ...b, qty: Number(b.qty) })), biaya_tambahan: biaya });
-      };
-
+  {/* Menu terlaris */}
+  <SectionTitle>🏆 Menu Terlaris ({periode})</SectionTitle>
+  {terlaris.length===0?<EmptyState text="Belum ada transaksi di periode ini"/>:
+    terlaris.map(([nama,qty],i)=>{
+      const tot=filtered.filter(t=>t.items.some(x=>x.nama===nama)).reduce((a,t)=>a+t.items.filter(x=>x.nama===nama).reduce((s,x)=>s+x.harga*x.qty,0),0);
       return (
-        <div style={{ padding: "16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-            <button onClick={onBack} style={{ width: 40, height: 40, borderRadius: 12, background: "#f5f6fa", border: "1.5px solid #e4e6ef", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Icon name="arrow_back" size={20} color="#4b5280" />
-            </button>
-            <div style={{ fontSize: 18, fontWeight: 800, color: "#1a1d2e" }}>{menu ? "Edit Menu" : "Tambah Menu Baru"}</div>
+        <div key={nama} style={{background:"#1a1a24",borderRadius:12,padding:"10px 16px",marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
+          <div style={{width:28,height:28,background:["#f59e0b","#94a3b8","#cd7c2f","#4b5563","#4b5563"][i],borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff",fontFamily:"'Space Mono'"}}>{i+1}</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:14,fontWeight:700,color:"#e2e8f0"}}>{nama}</div>
+            <div style={{fontSize:11,color:"#6b7280"}}>{qty} porsi terjual</div>
           </div>
-
-          <Card style={{ marginBottom: 16, padding: "18px" }}>
-            <FormGroup label="Nama Menu"><input value={nama} onChange={e => setNama(e.target.value)} placeholder="Ayam Geprek..." style={inputStyle} /></FormGroup>
-            <FormGroup label="Kategori">
-              <select value={kategori} onChange={e => setKategori(e.target.value)} style={inputStyle}>
-                {["Makanan", "Minuman", "Snack", "Paket"].map(k => <option key={k}>{k}</option>)}
-              </select>
-            </FormGroup>
-            <FormGroup label="Harga Jual (Rp)" style={{ marginBottom: 0 }}>
-              <input type="number" value={harga} onChange={e => setHarga(e.target.value)} placeholder="15000" style={inputStyle} />
-            </FormGroup>
-          </Card>
-
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#1a1d2e" }}>Daftar Bahan</div>
-              <button onClick={addBahan} style={{ ...btnSecondary, fontSize: 12, padding: "10px 14px", minHeight: 40 }}>
-                <Icon name="plus" size={14} color="#6366f1" /> Tambah
-              </button>
-            </div>
-            {bahan.map((b, i) => {
-              const isExisting = bahanExisting.some(e => e.bahan_id === b.bahan_id);
-              return (
-                <Card key={i} style={{ marginBottom: 10, padding: "14px", border: isExisting ? "1.5px solid #d1fae5" : "1.5px solid #e4e6ef" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                    <Badge text={isExisting ? "✓ Dari stok" : "✦ Bahan baru"} color={isExisting ? "#065f46" : "#4f51c8"} bg={isExisting ? "#ecfdf5" : "#eef0ff"} />
-                    <button onClick={() => removeBahan(i)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, borderRadius: 8 }}>
-                      <Icon name="close" size={18} color="#8b90b0" />
-                    </button>
-                  </div>
-                  {bahanExisting.length > 0 && (
-                    <FormGroup label="Pilih dari stok">
-                      <select value={isExisting ? b.bahan_id : ""} onChange={e => pilihBahanExisting(i, e.target.value)} style={inputStyle}>
-                        <option value="">-- atau tulis manual --</option>
-                        {bahanExisting.map(e => <option key={e.bahan_id} value={e.bahan_id}>{e.nama} ({e.satuan})</option>)}
-                      </select>
-                    </FormGroup>
-                  )}
-                  <FormGroup label="Nama bahan">
-                    <input value={b.nama} onChange={e => updateBahan(i, "nama", e.target.value)} placeholder="Nama bahan baru..." style={{ ...inputStyle, opacity: isExisting ? .5 : 1 }} />
-                  </FormGroup>
-                  <div style={{ display: "flex", gap: 10 }}>
-                    <FormGroup label="Jumlah" style={{ flex: 1, marginBottom: 0 }}>
-                      <input type="number" value={b.qty} onChange={e => updateBahan(i, "qty", e.target.value)} placeholder="0" style={inputStyle} />
-                    </FormGroup>
-                    <FormGroup label="Satuan" style={{ flex: 1, marginBottom: 0 }}>
-                      <select value={b.satuan} onChange={e => updateBahan(i, "satuan", e.target.value)} style={inputStyle}>
-                        {["gram", "ml", "kg", "liter", "pcs"].map(s => <option key={s}>{s}</option>)}
-                      </select>
-                    </FormGroup>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-
-          <Card style={{ marginBottom: 20, padding: "16px" }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: "#4b5280", marginBottom: 14, textTransform: "uppercase", letterSpacing: 1 }}>Biaya Tambahan (per porsi)</div>
-            {Object.entries(biaya).map(([k, v]) => (
-              <div key={k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <label style={{ fontSize: 14, color: "#4b5280", fontWeight: 600, textTransform: "capitalize" }}>{k}</label>
-                <input type="number" value={v} onChange={e => setBiaya(p => ({ ...p, [k]: Number(e.target.value) }))}
-                  style={{ ...inputStyle, width: 110, textAlign: "right" }} />
-              </div>
-            ))}
-          </Card>
-
-          <button onClick={handleSave} style={{ ...btnPrimary(), width: "100%", justifyContent: "center" }}>
-            <Icon name="check" size={18} color="#fff" /> Simpan Menu
-          </button>
+          <div style={{fontSize:13,fontWeight:800,color:"#22c55e",fontFamily:"'Space Mono'"}}>{fmt(tot)}</div>
         </div>
       );
-    }
+    })
+  }
 
-    function HppView({ menu, stok, onBack }) {
-      const hpp = calcHPP(menu, stok);
-      const margins = [10, 20, 30];
-      return (
-        <div style={{ padding: "16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-            <button onClick={onBack} style={{ width: 40, height: 40, borderRadius: 12, background: "#f5f6fa", border: "1.5px solid #e4e6ef", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Icon name="arrow_back" size={20} color="#4b5280" />
-            </button>
-            <div style={{ fontSize: 18, fontWeight: 800, color: "#1a1d2e" }}>HPP · {menu.nama}</div>
+  {/* Daftar transaksi */}
+  <SectionTitle style={{marginTop:16}}>🧾 Riwayat Transaksi</SectionTitle>
+  {filtered.length===0?<EmptyState text="Tidak ada transaksi di periode ini"/>:
+    filtered.map(t=>(
+      <div key={t.id} style={{background:"#1a1a24",borderRadius:12,padding:"10px 16px",marginBottom:8}}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+          <div>
+            <span style={{fontSize:12,color:"#6b7280",fontFamily:"'Space Mono'"}}>{fmtJam(t.waktu)}</span>
+            <span style={{fontSize:10,marginLeft:6,background:t.tipe==="takeaway"?"#1a1400":"#0f1a2e",color:t.tipe==="takeaway"?"#fbbf24":"#60a5fa",padding:"1px 6px",borderRadius:8,fontWeight:700}}>{t.tipe==="takeaway"?"Take Away":"Dine In"}</span>
           </div>
-
-          <Card style={{ marginBottom: 16, padding: "18px" }}>
-            <SectionTitle>💰 Rincian Biaya Bahan</SectionTitle>
-            {menu.bahan.map(b => {
-              const s = stok[b.bahan_id];
-              const biaya = s ? Math.round(b.qty * (s.satuan === "pcs" ? (s.harga_beli_per_pcs || 0) : (s.harga_beli_per_gram || 0))) : 0;
-              return (
-                <div key={b.bahan_id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #f0f1f7" }}>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1d2e" }}>{b.nama}</div>
-                    <div style={{ fontSize: 12, color: "#8b90b0" }}>
-                      {b.satuan === "pcs" ? `${b.qty} pcs × ${fmt(s?.harga_beli_per_pcs || 0)}/pcs` : `${b.qty}${b.satuan} × ${fmt((s?.harga_beli_per_gram || 0) * 1000)}/kg`}
-                    </div>
-                  </div>
-                  <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 14, fontWeight: 700, color: "#4b5280" }}>{fmt(biaya)}</div>
-                </div>
-              );
-            })}
-            <div style={{ marginTop: 14, padding: "12px 0 0" }}>
-              {[["Total Bahan", fmt(hpp.hpp_bahan)], ...Object.entries(menu.biaya_tambahan).map(([k, v]) => [`+ ${k.charAt(0).toUpperCase() + k.slice(1)}`, fmt(v)])].map(([l, v]) => (
-                <div key={l} style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                  <span style={{ fontSize: 13, color: "#8b90b0" }}>{l}</span>
-                  <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 13, fontWeight: 600, color: "#4b5280" }}>{v}</span>
-                </div>
-              ))}
-              <div style={{ height: 1, background: "#e4e6ef", margin: "12px 0" }} />
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ fontSize: 15, fontWeight: 800, color: "#1a1d2e" }}>HPP Total</span>
-                <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 16, fontWeight: 800, color: "#6366f1" }}>{fmt(hpp.hpp_total)}</span>
-              </div>
-            </div>
-          </Card>
-
-          <SectionTitle>📈 Rekomendasi Harga Jual</SectionTitle>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-            {margins.map(m => (
-              <Card key={m} style={{ padding: "16px 10px", textAlign: "center", border: m === 20 ? "2px solid #6366f1" : "1.5px solid #e4e6ef" }}>
-                <div style={{ fontSize: 22, fontWeight: 900, color: m === 20 ? "#6366f1" : "#1a1d2e", marginBottom: 2 }}>{m}%</div>
-                <div style={{ fontSize: 11, color: "#8b90b0", marginBottom: 6, fontWeight: 600 }}>Margin</div>
-                <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 13, fontWeight: 700, color: "#10b981" }}>{fmt(Math.round(hpp.hpp_total / (1 - m / 100)))}</div>
-              </Card>
-            ))}
-          </div>
+          <span style={{fontSize:14,fontWeight:800,color:"#22c55e"}}>{fmt(t.total)}</span>
         </div>
-      );
-    }
+        <div style={{fontSize:12,color:"#9ca3af"}}>{t.items.map(i=>`${i.nama} ×${i.qty}`).join(", ")}</div>
+      </div>
+    ))
+  }
+</div>
+```
 
-    // ─── STOK PAGE ────────────────────────────────────────────────────────────────
-    const UNIT_KONVERSI = { "gram": 1, "kg": 1000, "ml": 1, "liter": 1000, "pcs": 1, "lusin (12)": 12, "kodi (20)": 20, "gross (144)": 144 };
+);
+}
 
-    function StokPage({ stok, setStok, allBahan }) {
-      const [selected, setSelected] = useState("");
-      const [inputQty, setInputQty] = useState("");
-      const [inputUnit, setInputUnit] = useState("gram");
-      const [hargaBeli, setHargaBeli] = useState("");
-      const [editId, setEditId] = useState(null);
-      const [editVal, setEditVal] = useState("");
-      const [editMax, setEditMax] = useState("");
-      const bahan = allBahan();
+```
+const root=ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App/>);
+```
 
-      const toDisplayVal = (s, field) => {
-        const qty = s[field] || 0;
-        if (s.satuan === "pcs") return String(qty);
-        return qty >= 1000 ? String((qty / 1000).toFixed(3)) : String(qty);
-      };
-      const toBaseDasar = (s, val) => {
-        const num = parseFloat(val);
-        if (s.satuan === "pcs") return num;
-        return (s.stok_awal >= 1000 || s.stok_saat_ini >= 1000) ? num * 1000 : num;
-      };
-
-      const handleEditStok = (id) => {
-        const s = stok[id];
-        setEditVal(toDisplayVal(s, "stok_saat_ini"));
-        setEditMax(toDisplayVal(s, "stok_awal"));
-        setEditId(id);
-      };
-      const handleSaveEdit = (id) => {
-        const s = stok[id];
-        const vT = parseFloat(editVal), vM = parseFloat(editMax);
-        if (isNaN(vT) || vT < 0) return alert("Stok tersedia tidak valid!");
-        if (isNaN(vM) || vM <= 0) return alert("Stok maksimal harus lebih dari 0!");
-        if (vT > vM) return alert("Stok tersedia tidak boleh melebihi maksimal!");
-        setStok(prev => ({ ...prev, [id]: { ...prev[id], stok_saat_ini: toBaseDasar(s, editVal), stok_awal: toBaseDasar(s, editMax) } }));
-        setEditId(null); setEditVal(""); setEditMax("");
-      };
-      const handleCancelEdit = () => { setEditId(null); setEditVal(""); setEditMax(""); };
-
-      const selectedStok = stok[selected];
-      const satuanDasar = selectedStok?.satuan || (bahan[selected]?.satuan === "pcs" ? "pcs" : "gram");
-      const isPcs = satuanDasar === "pcs";
-      const unitOptions = isPcs ? ["pcs", "lusin (12)", "kodi (20)", "gross (144)"] : satuanDasar === "ml" ? ["ml", "liter"] : ["gram", "kg"];
-
-      const handleSelectBahan = (id) => {
-        setSelected(id);
-        const s = stok[id];
-        const dasar = s?.satuan || bahan[id]?.satuan || "gram";
-        setInputUnit(dasar === "pcs" ? "pcs" : dasar === "ml" ? "ml" : "gram");
-        setHargaBeli(s?.harga_beli_per_unit?.toString() || "");
-        setInputQty("");
-      };
-      const handleTambahStok = () => {
-        if (!selected || !inputQty || !hargaBeli) return alert("Lengkapi semua field!");
-        const konversi = UNIT_KONVERSI[inputUnit] || 1;
-        const qtyDasar = Number(inputQty) * konversi;
-        const hargaPerDasar = isPcs ? Number(hargaBeli) / konversi : Number(hargaBeli) / (Number(inputQty) * konversi);
-        setStok(prev => ({
-          ...prev,
-          [selected]: {
-            ...prev[selected],
-            nama: bahan[selected]?.nama || selected,
-            satuan: satuanDasar,
-            stok_awal: (prev[selected]?.stok_awal || 0) + qtyDasar,
-            stok_saat_ini: (prev[selected]?.stok_saat_ini || 0) + qtyDasar,
-            ...(isPcs ? { harga_beli_per_pcs: Number(hargaBeli) / konversi, harga_beli_per_unit: Number(hargaBeli), unit_nama: inputUnit, unit_qty: konversi }
-              : { harga_beli_per_gram: hargaPerDasar, harga_beli_per_unit: Number(hargaBeli), unit_nama: inputUnit, unit_qty: konversi }),
-          }
-        }));
-        setInputQty(""); setHargaBeli(""); setSelected("");
-      };
-      const previewHarga = () => {
-        if (!inputQty || !hargaBeli) return null;
-        const konversi = UNIT_KONVERSI[inputUnit] || 1;
-        if (isPcs) return `= ${fmt(Number(hargaBeli) / konversi)} / pcs`;
-        return `= ${fmt(Number(hargaBeli) / (Number(inputQty) * konversi) * 1000)} / kg`;
-      };
-
-      return (
-        <div style={{ padding: "16px" }}>
-          <Card style={{ marginBottom: 20, padding: "18px" }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: "#6366f1", marginBottom: 16, letterSpacing: 0.5 }}>📦 Tambah / Update Stok</div>
-            <FormGroup label="Pilih Bahan">
-              <select value={selected} onChange={e => handleSelectBahan(e.target.value)} style={inputStyle}>
-                <option value="">-- Pilih bahan dari menu --</option>
-                {Object.entries(bahan).map(([id, b]) => <option key={id} value={id}>{b.nama} {b.satuan === "pcs" ? "🥚 pcs" : `(${b.satuan})`}</option>)}
-              </select>
-            </FormGroup>
-            {selected && (
-              <>
-                <div style={{ background: isPcs ? "#eef0ff" : "#ecfdf5", borderRadius: 10, padding: "10px 14px", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 13, color: isPcs ? "#4f51c8" : "#065f46", fontWeight: 600 }}>
-                    {isPcs ? "🥚 Bahan dihitung per pcs" : `⚖️ Bahan dihitung per ${satuanDasar}`}
-                  </span>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 4 }}>
-                  <FormGroup label="Jumlah Beli" style={{ marginBottom: 0 }}>
-                    <input type="number" value={inputQty} onChange={e => setInputQty(e.target.value)} placeholder="0" style={inputStyle} />
-                  </FormGroup>
-                  <FormGroup label="Satuan" style={{ marginBottom: 0 }}>
-                    <select value={inputUnit} onChange={e => setInputUnit(e.target.value)} style={inputStyle}>
-                      {unitOptions.map(s => <option key={s}>{s}</option>)}
-                    </select>
-                  </FormGroup>
-                </div>
-                <FormGroup label={`Harga Beli Total (Rp) per ${inputUnit}`}>
-                  <input type="number" value={hargaBeli} onChange={e => setHargaBeli(e.target.value)} placeholder={isPcs ? "50000 (1 kodi)" : "30000"} style={inputStyle} />
-                </FormGroup>
-                {previewHarga() && (
-                  <div style={{ background: "#ecfdf5", borderRadius: 10, padding: "10px 14px", marginBottom: 14, display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 13, color: "#4b5280" }}>Otomatis dihitung:</span>
-                    <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 13, fontWeight: 700, color: "#10b981" }}>{previewHarga()}</span>
-                  </div>
-                )}
-                <button onClick={handleTambahStok} style={{ ...btnPrimary(), width: "100%", justifyContent: "center" }}>
-                  <Icon name="plus" size={18} color="#fff" /> Update Stok
-                </button>
-              </>
-            )}
-          </Card>
-
-          <SectionTitle>📊 Daftar Stok Bahan</SectionTitle>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {Object.entries(stok).map(([id, s]) => {
-              const pct = getStokPersen(s);
-              const w = getStokWarna(pct);
-              const isEditing = editId === id;
-              const displayUnit = s.satuan === "pcs" ? "pcs" : (s.stok_awal >= 1000 || s.stok_saat_ini >= 1000) ? (s.satuan === "gram" ? "kg" : "L") : s.satuan;
-              return (
-                <Card key={id} style={{ padding: "16px", border: isEditing ? "1.5px solid #6366f1" : "1.5px solid transparent", transition: "border .2s" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-                        <div style={{ fontSize: 15, fontWeight: 800, color: "#1a1d2e" }}>{s.nama}</div>
-                        {s.satuan === "pcs" && <Badge text="PCS" color="#4f51c8" bg="#eef0ff" />}
-                      </div>
-                      <div style={{ fontSize: 12, color: "#8b90b0" }}>{fmtHargaPerUnit(s)} · Nilai: {fmt(nilaiStok(s))}</div>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 16, fontWeight: 700, color: w.bg }}>{pct}%</div>
-                      <Badge text={w.label} color={w.text} bg={w.light} />
-                    </div>
-                  </div>
-                  <ProgressBar pct={pct} color={w.bg} />
-
-                  {isEditing ? (
-                    <div style={{ marginTop: 14 }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-                        <FormGroup label="Stok Tersedia" style={{ marginBottom: 0 }}>
-                          <div style={{ position: "relative" }}>
-                            <input type="number" value={editVal} onChange={e => setEditVal(e.target.value)} autoFocus
-                              style={{ ...inputStyle, paddingRight: 48, fontFamily: "'JetBrains Mono'", fontWeight: 700, border: "1.5px solid #6366f1" }} />
-                            <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: "#6366f1", fontWeight: 700 }}>{displayUnit}</span>
-                          </div>
-                        </FormGroup>
-                        <FormGroup label="Stok Maksimal" style={{ marginBottom: 0 }}>
-                          <div style={{ position: "relative" }}>
-                            <input type="number" value={editMax} onChange={e => setEditMax(e.target.value)}
-                              style={{ ...inputStyle, paddingRight: 48, fontFamily: "'JetBrains Mono'", fontWeight: 700 }} />
-                            <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: "#8b90b0", fontWeight: 700 }}>{displayUnit}</span>
-                          </div>
-                        </FormGroup>
-                      </div>
-                      {editVal && editMax && parseFloat(editMax) > 0 && parseFloat(editVal) <= parseFloat(editMax) && (
-                        <div style={{ background: "#ecfdf5", borderRadius: 10, padding: "8px 14px", marginBottom: 12, display: "flex", justifyContent: "space-between" }}>
-                          <span style={{ fontSize: 12, color: "#4b5280" }}>Preview:</span>
-                          <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 12, fontWeight: 700, color: "#10b981" }}>
-                            {Math.round((parseFloat(editVal) / parseFloat(editMax)) * 100)}%
-                          </span>
-                        </div>
-                      )}
-                      <div style={{ display: "flex", gap: 10 }}>
-                        <button onClick={() => handleSaveEdit(id)} style={{ ...btnPrimary("#10b981"), flex: 1, justifyContent: "center", padding: "12px" }}>
-                          <Icon name="check" size={16} color="#fff" /> Simpan
-                        </button>
-                        <button onClick={handleCancelEdit} style={{ ...btnSecondary, padding: "12px 16px" }}>
-                          <Icon name="close" size={16} color="#4b5280" />
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-                      <div>
-                        <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 13, color: "#1a1d2e", fontWeight: 700 }}>{fmtStokQty(s)}</span>
-                        <span style={{ fontSize: 12, color: "#8b90b0" }}> / {fmtStokQty(s, "stok_awal")}</span>
-                      </div>
-                      <button onClick={() => handleEditStok(id)} style={{ ...btnSecondary, fontSize: 12, padding: "10px 14px", minHeight: 40 }}>
-                        <Icon name="edit" size={14} color="#6366f1" /> Edit Stok
-                      </button>
-                    </div>
-                  )}
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      );
-    }
-
-    // ─── KASIR PAGE ───────────────────────────────────────────────────────────────
-    function KasirPage({ menus, addTransaksi, stok }) {
-      const [cart, setCart] = useState([]);
-      const [bayar, setBayar] = useState("");
-      const [sukses, setSukses] = useState(false);
-      const [activeKat, setActiveKat] = useState(null);
-
-      const total = cart.reduce((a, i) => a + i.harga * i.qty, 0);
-      const kembalian = Number(bayar) - total;
-      const kategoris = [...new Set(menus.map(m => m.kategori))];
-      const katActive = activeKat || kategoris[0];
-
-      const addToCart = (menu) => {
-        setCart(prev => {
-          const found = prev.find(i => i.menu_id === menu.id);
-          if (found) return prev.map(i => i.menu_id === menu.id ? { ...i, qty: i.qty + 1 } : i);
-          return [...prev, { menu_id: menu.id, nama: menu.nama, harga: menu.harga_jual, qty: 1 }];
-        });
-      };
-      const changeQty = (menu_id, delta) => {
-        setCart(prev => prev.map(i => i.menu_id === menu_id ? { ...i, qty: Math.max(0, i.qty + delta) } : i).filter(i => i.qty > 0));
-      };
-      const handleBayar = () => {
-        if (cart.length === 0) return alert("Keranjang kosong!");
-        if (Number(bayar) < total) return alert("Bayar kurang!");
-        addTransaksi({ id: "t" + uid(), waktu: new Date().toISOString(), items: cart, total, bayar: Number(bayar), kembalian });
-        setSukses(true);
-        setTimeout(() => { setSukses(false); setCart([]); setBayar(""); }, 3000);
-      };
-
-      if (sukses) {
-        return (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "60vh", gap: 16, padding: 24 }}>
-            <div style={{ width: 88, height: 88, background: "#ecfdf5", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "3px solid #d1fae5" }}>
-              <Icon name="check" size={44} color="#10b981" />
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 900, color: "#10b981" }}>Berhasil!</div>
-            <div style={{ fontSize: 16, color: "#4b5280", fontWeight: 600 }}>Total: {fmt(total)}</div>
-            <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 18, fontWeight: 700, color: "#6366f1" }}>Kembalian: {fmt(Math.max(0, kembalian))}</div>
-            <div style={{ fontSize: 12, color: "#8b90b0" }}>Stok otomatis diperbarui ✓</div>
-          </div>
-        );
-      }
-
-      return (
-        <div>
-          {/* KATEGORI TABS */}
-          <div style={{ display: "flex", gap: 8, padding: "12px 16px 8px", overflowX: "auto", borderBottom: "1px solid #eef0f6" }}>
-            {kategoris.map(kat => (
-              <button key={kat} onClick={() => setActiveKat(kat)}
-                style={{ flexShrink: 0, padding: "8px 16px", borderRadius: 99, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700,
-                  background: katActive === kat ? "#6366f1" : "#f0f1f7",
-                  color: katActive === kat ? "#fff" : "#4b5280",
-                  boxShadow: katActive === kat ? "0 4px 12px #6366f140" : "none",
-                  transition: "all .2s", minHeight: 40 }}>
-                {kat}
-              </button>
-            ))}
-          </div>
-
-          {/* MENU GRID */}
-          <div style={{ padding: "12px 16px 8px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              {menus.filter(m => m.kategori === katActive).map(menu => {
-                const inCart = cart.find(i => i.menu_id === menu.id);
-                return (
-                  <button key={menu.id} onClick={() => addToCart(menu)}
-                    style={{ background: inCart ? "#f0f0ff" : "#fff", border: inCart ? "2px solid #6366f1" : "1.5px solid #e4e6ef", borderRadius: 16, padding: "16px 14px", textAlign: "left", cursor: "pointer", position: "relative", boxShadow: inCart ? "0 4px 12px #6366f120" : "0 1px 4px rgba(0,0,0,.05)", transition: "all .15s", minHeight: 80 }}>
-                    {inCart && (
-                      <div style={{ position: "absolute", top: 10, right: 10, background: "#6366f1", color: "#fff", fontSize: 11, fontWeight: 800, borderRadius: 20, padding: "2px 8px" }}>{inCart.qty}×</div>
-                    )}
-                    <div style={{ fontSize: 14, fontWeight: 800, color: "#1a1d2e", marginBottom: 6, lineHeight: 1.3, paddingRight: inCart ? 32 : 0 }}>{menu.nama}</div>
-                    <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 14, fontWeight: 700, color: "#10b981" }}>{fmt(menu.harga_jual)}</div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* CART */}
-          {cart.length > 0 && (
-            <div style={{ background: "#fff", borderTop: "1px solid #eef0f6", padding: "16px", margin: "12px 0 0" }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "#8b90b0", marginBottom: 12, letterSpacing: 1, textTransform: "uppercase" }}>🛒 Pesanan ({cart.length} item)</div>
-              {cart.map(item => (
-                <div key={item.menu_id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, padding: "8px 0", borderBottom: "1px solid #f0f1f7" }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1d2e" }}>{item.nama}</div>
-                    <div style={{ fontSize: 12, color: "#8b90b0" }}>{fmt(item.harga)}</div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ fontFamily: "'JetBrains Mono'", fontSize: 13, fontWeight: 700, color: "#10b981" }}>{fmt(item.harga * item.qty)}</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f5f6fa", borderRadius: 99, padding: "4px 8px" }}>
-                      <button onClick={() => changeQty(item.menu_id, -1)} style={{ width: 28, height: 28, borderRadius: "50%", background: "#fff", border: "1px solid #e4e6ef", cursor: "pointer", color: "#4b5280", fontSize: 16, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-                      <span style={{ fontSize: 14, fontWeight: 800, color: "#1a1d2e", minWidth: 20, textAlign: "center" }}>{item.qty}</span>
-                      <button onClick={() => changeQty(item.menu_id, 1)} style={{ width: 28, height: 28, borderRadius: "50%", background: "#6366f1", border: "none", cursor: "pointer", color: "#fff", fontSize: 16, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 16px", alignItems: "center" }}>
-                <span style={{ fontSize: 16, fontWeight: 800, color: "#1a1d2e" }}>Total</span>
-                <span style={{ fontFamily: "'JetBrains Mono'", fontSize: 20, fontWeight: 900, color: "#6366f1" }}>{fmt(total)}</span>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
-                <FormGroup label="Bayar (Rp)" style={{ marginBottom: 0 }}>
-                  <input type="number" value={bayar} onChange={e => setBayar(e.target.value)} placeholder={total.toString()}
-                    style={{ ...inputStyle, fontFamily: "'JetBrains Mono'", fontWeight: 700 }} />
-                </FormGroup>
-                <FormGroup label="Kembalian" style={{ marginBottom: 0 }}>
-                  <div style={{ background: "#f8f9fe", borderRadius: 12, padding: "14px 16px", fontFamily: "'JetBrains Mono'", fontSize: 15, fontWeight: 700, color: kembalian >= 0 && bayar ? "#10b981" : "#ef4444", border: "1.5px solid #e4e6ef", minHeight: 54, display: "flex", alignItems: "center" }}>
-                    {bayar ? fmt(Math.max(0, kembalian)) : "—"}
-                  </div>
-                </FormGroup>
-              </div>
-
-              <button onClick={handleBayar} style={{ ...btnPrimary("#10b981"), width: "100%", justifyContent: "center" }}>
-                <Icon name="check" size={20} color="#fff" /> Proses Pembayaran
-              </button>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
   </script>
   <script>
-    if ('serviceWorker' in navigator) {
-      const isProd = !location.hostname.includes('claudeusercontent.com') &&
-                     location.hostname !== 'localhost' &&
-                     !location.hostname.includes('127.0.0.1');
-      if (isProd) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('sw.js')
-            .then(() => console.log('[RestoKu] Offline mode aktif ✓'))
-            .catch(e => console.warn('[RestoKu] SW gagal:', e.message));
-        });
-      }
+    if('serviceWorker' in navigator){
+      const ok=!location.hostname.includes('claudeusercontent.com')&&location.hostname!=='localhost'&&!location.hostname.includes('127.0.0.1');
+      if(ok) window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').then(()=>console.log('[RestoKu] Offline ✓')).catch(e=>console.warn('[RestoKu]',e.message)));
+      else console.log('[RestoKu] Preview mode — SW skip');
     }
   </script>
 </body>
