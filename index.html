@@ -1,9 +1,8 @@
 <!DOCTYPE html>
-
 <html lang="id">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
   <meta name="theme-color" content="#6366f1"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -20,7 +19,7 @@
   </style>
   <script>
     const _w=console.warn.bind(console);
-    console.warn=(...a)=>{if(typeof a[0]==='string'&&a[0].includes('Babel transformer'))return;_w(...a);};
+    console.warn=(...a)=>{if(typeof a[0]==='string'&&a[0].includes('Babel'))return;_w(...a);};
   </script>
 </head>
 <body>
@@ -31,1343 +30,1460 @@
   <script type="text/babel" data-presets="react">
     const {useState,useEffect,useCallback,useRef}=React;
 
-// ─── PERSISTENT STORAGE ───────────────────────────────────────────────────────
-function useLocalStorage(key, initialValue) {
-const [storedValue, setStoredValue] = useState(() => {
-try { const item = window.localStorage.getItem(key); return item ? JSON.parse(item) : initialValue; } catch { return initialValue; }
-});
-const setValue = (value) => {
-try {
-const v = value instanceof Function ? value(storedValue) : value;
-setStoredValue(v);
-window.localStorage.setItem(key, JSON.stringify(v));
-} catch (err) { console.warn(“localStorage error:”, err); }
-};
-return [storedValue, setValue];
+// ─── STORAGE ──────────────────────────────────────────────────────────────────
+function useLS(key, init) {
+  const [val, setVal] = useState(() => {
+    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : init; } catch { return init; }
+  });
+  const set = (v) => {
+    try { const nv = v instanceof Function ? v(val) : v; setVal(nv); localStorage.setItem(key, JSON.stringify(nv)); } catch {}
+  };
+  return [val, set];
 }
-
-function clearAllData() {
-[“restoku_menus”,“restoku_stok”,“restoku_transaksi”,“restoku_perlengkapan”,“restoku_biaya_ops”,“restoku_paket”].forEach(k => window.localStorage.removeItem(k));
-window.location.reload();
+function resetAll() {
+  ["rk2_bahan","rk2_komponen","rk2_produk","rk2_transaksi","rk2_perlengkapan","rk2_biaya_ops","rk2_paket"].forEach(k => localStorage.removeItem(k));
+  location.reload();
 }
 
 // ─── SEED DATA ────────────────────────────────────────────────────────────────
-const SEED_MENUS = [
-{ id:“m1”, nama:“Ayam Geprek”, kategori:“Makanan”, harga_jual:18000, biaya_tambahan:{listrik:500,gas:300,air:100,labor:2000}, bahan:[{bahan_id:“b1”,nama:“Ayam”,qty:120,satuan:“gram”},{bahan_id:“b2”,nama:“Tepung”,qty:50,satuan:“gram”},{bahan_id:“b3”,nama:“Minyak Goreng”,qty:15,satuan:“ml”}] },
-{ id:“m2”, nama:“Nasi Goreng”, kategori:“Makanan”, harga_jual:15000, biaya_tambahan:{listrik:400,gas:400,air:100,labor:2000}, bahan:[{bahan_id:“b4”,nama:“Nasi”,qty:200,satuan:“gram”},{bahan_id:“b5”,nama:“Telur”,qty:1,satuan:“pcs”},{bahan_id:“b3”,nama:“Minyak Goreng”,qty:10,satuan:“ml”}] },
-{ id:“m3”, nama:“Es Teh Manis”, kategori:“Minuman”, harga_jual:5000, biaya_tambahan:{listrik:100,gas:0,air:200,labor:500}, bahan:[{bahan_id:“b6”,nama:“Teh”,qty:5,satuan:“gram”},{bahan_id:“b7”,nama:“Gula”,qty:20,satuan:“gram”}] },
+// BahanBaku: { id, nama, satuan, harga_per_satuan, stok_saat_ini, stok_awal, riwayat[] }
+const SEED_BAHAN = [
+  { id:"bb1", nama:"Ayam", satuan:"gram", harga_per_satuan:0.05, stok_saat_ini:5000, stok_awal:5000, riwayat:[] },
+  { id:"bb2", nama:"Tepung", satuan:"gram", harga_per_satuan:0.012, stok_saat_ini:3000, stok_awal:3000, riwayat:[] },
+  { id:"bb3", nama:"Minyak Goreng", satuan:"ml", harga_per_satuan:0.014, stok_saat_ini:2000, stok_awal:2000, riwayat:[] },
+  { id:"bb4", nama:"Beras", satuan:"gram", harga_per_satuan:0.012, stok_saat_ini:10000, stok_awal:10000, riwayat:[] },
+  { id:"bb5", nama:"Telur", satuan:"pcs", harga_per_satuan:2500, stok_saat_ini:40, stok_awal:40, riwayat:[] },
+  { id:"bb6", nama:"Teh", satuan:"gram", harga_per_satuan:0.06, stok_saat_ini:500, stok_awal:500, riwayat:[] },
+  { id:"bb7", nama:"Gula", satuan:"gram", harga_per_satuan:0.013, stok_saat_ini:5000, stok_awal:5000, riwayat:[] },
+  { id:"bb8", nama:"Cabe Rawit", satuan:"gram", harga_per_satuan:0.04, stok_saat_ini:1000, stok_awal:1000, riwayat:[] },
+  { id:"bb9", nama:"Bawang Putih", satuan:"gram", harga_per_satuan:0.025, stok_saat_ini:1000, stok_awal:1000, riwayat:[] },
 ];
-const SEED_STOK = {
-“b1”:{nama:“Ayam”,stok_awal:5000,stok_saat_ini:3800,satuan:“gram”,harga_beli_per_gram:0.03,harga_beli_per_unit:30000,unit_qty:1000,riwayat:[]},
-“b2”:{nama:“Tepung”,stok_awal:3000,stok_saat_ini:2450,satuan:“gram”,harga_beli_per_gram:0.012,harga_beli_per_unit:12000,unit_qty:1000,riwayat:[]},
-“b3”:{nama:“Minyak Goreng”,stok_awal:2000,stok_saat_ini:1620,satuan:“ml”,harga_beli_per_gram:0.014,harga_beli_per_unit:14000,unit_qty:1000,riwayat:[]},
-“b4”:{nama:“Nasi”,stok_awal:10000,stok_saat_ini:7200,satuan:“gram”,harga_beli_per_gram:0.01,harga_beli_per_unit:10000,unit_qty:1000,riwayat:[]},
-“b5”:{nama:“Telur”,stok_awal:40,stok_saat_ini:28,satuan:“pcs”,harga_beli_per_pcs:2500,harga_beli_per_unit:50000,unit_nama:“kodi”,unit_qty:20,riwayat:[]},
-“b6”:{nama:“Teh”,stok_awal:500,stok_saat_ini:420,satuan:“gram”,harga_beli_per_gram:0.06,harga_beli_per_unit:30000,unit_qty:500,riwayat:[]},
-“b7”:{nama:“Gula”,stok_awal:5000,stok_saat_ini:4100,satuan:“gram”,harga_beli_per_gram:0.013,harga_beli_per_unit:13000,unit_qty:1000,riwayat:[]},
-};
-const SEED_TRANSAKSI = [
-{ id:“t1”, waktu:new Date(Date.now()-3600000).toISOString(), items:[{menu_id:“m1”,nama:“Ayam Geprek”,qty:2,harga:18000},{menu_id:“m3”,nama:“Es Teh Manis”,qty:2,harga:5000}], total:46000, bayar:50000, kembalian:4000, tipe:“dine-in” },
-{ id:“t2”, waktu:new Date(Date.now()-7200000).toISOString(), items:[{menu_id:“m2”,nama:“Nasi Goreng”,qty:3,harga:15000}], total:45000, bayar:50000, kembalian:5000, tipe:“dine-in” },
+
+// Komponen: { id, nama, yield_mode("batch"|"per_porsi"), batch_qty, yield_porsi,
+//   detail: [{ item_id, tipe("bahan"|"komponen"), qty, satuan }] }
+const SEED_KOMPONEN = [
+  {
+    id:"ko1", nama:"Ayam Goreng Tepung", yield_mode:"batch", batch_qty:1, yield_porsi:1,
+    detail:[
+      { item_id:"bb1", tipe:"bahan", qty:120, satuan:"gram" },
+      { item_id:"bb2", tipe:"bahan", qty:50, satuan:"gram" },
+      { item_id:"bb3", tipe:"bahan", qty:15, satuan:"ml" },
+    ]
+  },
+  {
+    id:"ko2", nama:"Nasi Putih", yield_mode:"batch", batch_qty:1, yield_porsi:1,
+    detail:[{ item_id:"bb4", tipe:"bahan", qty:200, satuan:"gram" }]
+  },
+  {
+    id:"ko3", nama:"Sambal Geprek", yield_mode:"batch", batch_qty:10, yield_porsi:10,
+    detail:[
+      { item_id:"bb8", tipe:"bahan", qty:200, satuan:"gram" },
+      { item_id:"bb9", tipe:"bahan", qty:50, satuan:"gram" },
+      { item_id:"bb3", tipe:"bahan", qty:20, satuan:"ml" },
+    ]
+  },
+  {
+    id:"ko4", nama:"Es Teh Manis", yield_mode:"batch", batch_qty:1, yield_porsi:1,
+    detail:[
+      { item_id:"bb6", tipe:"bahan", qty:5, satuan:"gram" },
+      { item_id:"bb7", tipe:"bahan", qty:20, satuan:"gram" },
+    ]
+  },
 ];
+
+// Produk: { id, nama, kategori, harga_jual, komposisi: [{ item_id, tipe, qty }] }
+const SEED_PRODUK = [
+  {
+    id:"pr1", nama:"Ayam Geprek", kategori:"Makanan", harga_jual:18000,
+    komposisi:[
+      { item_id:"ko1", tipe:"komponen", qty:1 },
+      { item_id:"ko2", tipe:"komponen", qty:1 },
+      { item_id:"ko3", tipe:"komponen", qty:1 },
+    ]
+  },
+  {
+    id:"pr2", nama:"Es Teh Manis", kategori:"Minuman", harga_jual:5000,
+    komposisi:[{ item_id:"ko4", tipe:"komponen", qty:1 }]
+  },
+];
+
+const SEED_TRANSAKSI = [];
 const SEED_PERLENGKAPAN = {
-“p1”:{nama:“Sendok Plastik”,stok_awal:200,stok_saat_ini:160,satuan:“pcs”},
-“p2”:{nama:“Box Makanan”,stok_awal:100,stok_saat_ini:80,satuan:“pcs”},
-“p3”:{nama:“Kantong Plastik”,stok_awal:150,stok_saat_ini:120,satuan:“pcs”},
+  "pl1":{ nama:"Sendok Plastik", stok_awal:200, stok_saat_ini:200, satuan:"pcs" },
+  "pl2":{ nama:"Box Makanan", stok_awal:100, stok_saat_ini:100, satuan:"pcs" },
 };
 const SEED_BIAYA_OPS = { listrik:500, gas:300, air:100, labor:2000 };
 const SEED_PAKET = [];
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
-const fmt = (n) => new Intl.NumberFormat(“id-ID”,{style:“currency”,currency:“IDR”,minimumFractionDigits:0}).format(n);
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+const fmt = n => new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",minimumFractionDigits:0}).format(n);
 const uid = () => Math.random().toString(36).slice(2,9);
-const fmtTgl = (iso) => new Date(iso).toLocaleDateString(“id-ID”,{day:“2-digit”,month:“short”,year:“numeric”});
-const fmtJam = (iso) => new Date(iso).toLocaleTimeString(“id-ID”,{hour:“2-digit”,minute:“2-digit”});
+const fmtTgl = iso => new Date(iso).toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"});
+const fmtJam = iso => new Date(iso).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});
 
-function hargaPerUnit(s) {
-if (!s) return 0;
-if (s.satuan===“pcs”) return s.harga_beli_per_pcs||0;
-return s.harga_beli_per_gram||0;
-}
-function calcHPP(menu, stok, biayaOps) {
-let hpp_bahan=0;
-menu.bahan.forEach(b => { const s=stok[b.bahan_id]; if(s) hpp_bahan+=b.qty*hargaPerUnit(s); });
-const ops = biayaOps || menu.biaya_tambahan || {};
-const biaya = Object.values(ops).reduce((a,b)=>a+Number(b),0);
-return { hpp_bahan:Math.round(hpp_bahan), biaya_tambahan:biaya, hpp_total:Math.round(hpp_bahan+biaya) };
-}
-function getStokPersen(s) { return s.stok_awal>0?Math.round((s.stok_saat_ini/s.stok_awal)*100):0; }
-function getStokWarna(pct) {
-if(pct>=70) return {bg:”#22c55e”,text:”#15803d”,light:”#dcfce7”,label:“Aman”};
-if(pct>=30) return {bg:”#f59e0b”,text:”#b45309”,light:”#fef3c7”,label:“Warning”};
-return {bg:”#ef4444”,text:”#b91c1c”,light:”#fee2e2”,label:“Kritis”};
-}
-function fmtStokQty(s,field=“stok_saat_ini”) {
-const qty=s[field]||0;
-if(s.satuan===“pcs”) return `${qty} pcs`;
-if(qty>=1000) return `${(qty/1000).toFixed(2)} ${s.satuan==="gram"?"kg":"L"}`;
-return `${qty} ${s.satuan}`;
-}
-function fmtHargaPerUnit(s) {
-if(s.satuan===“pcs”) return `${fmt(s.harga_beli_per_pcs||0)}/pcs`;
-return `${fmt((s.harga_beli_per_gram||0)*1000)}/kg`;
-}
-function nilaiStok(s) {
-if(s.satuan===“pcs”) return s.stok_saat_ini*(s.harga_beli_per_pcs||0);
-return s.stok_saat_ini*(s.harga_beli_per_gram||0);
-}
-function hitungPorsi(menu,stok) {
-if(!menu.bahan||menu.bahan.length===0) return 0;
-let min=Infinity;
-menu.bahan.forEach(b=>{ const s=stok[b.bahan_id]; if(!s||b.qty<=0) return; const p=Math.floor(s.stok_saat_ini/b.qty); if(p<min) min=p; });
-return min===Infinity?0:min;
-}
-function bottleneckBahan(menu,stok) {
-let min=Infinity,nama=””;
-menu.bahan.forEach(b=>{ const s=stok[b.bahan_id]; if(!s||b.qty<=0) return; const p=Math.floor(s.stok_saat_ini/b.qty); if(p<min){min=p;nama=b.nama;} });
-return nama;
+// Hitung HPP satu komponen (rekursif untuk nested)
+function hppKomponen(koId, komponen, bahan, visited = new Set()) {
+  if (visited.has(koId)) return 0; // cegah circular
+  visited.add(koId);
+  const ko = komponen.find(k => k.id === koId);
+  if (!ko) return 0;
+  let total = 0;
+  ko.detail.forEach(d => {
+    if (d.tipe === "bahan") {
+      const b = bahan.find(x => x.id === d.item_id);
+      total += b ? d.qty * b.harga_per_satuan : 0;
+    } else if (d.tipe === "komponen") {
+      const subHpp = hppKomponen(d.item_id, komponen, bahan, new Set(visited));
+      total += subHpp * d.qty;
+    }
+  });
+  // Divide by yield
+  const yieldPorsi = ko.yield_mode === "batch" ? (ko.yield_porsi || 1) : 1;
+  return total / yieldPorsi;
 }
 
-// ─── ICONS ────────────────────────────────────────────────────────────────────
-const Icon = ({name,size=20,color=“currentColor”}) => {
-const paths = {
-menu:“M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z”,
-stock:“M20 6h-2.18c.07-.44.18-.88.18-1.35C18 2.53 15.47 0 12.35 0c-1.7 0-3.21.79-4.17 2.04C7.32.79 5.8 0 4.1 0 1 0 0 2.53 0 4.65c0 .47.11.91.18 1.35H0v2h20V6zM0 8h20v12H0V8z”,
-cashier:“M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 16.1 6.1 17 7 17h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.48 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z”,
-dashboard:“M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z”,
-plus:“M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z”,
-trash:“M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z”,
-edit:“M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z”,
-check:“M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z”,
-bell:“M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z”,
-arrow_back:“M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z”,
-close:“M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z”,
-info:“M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z”,
-food:“M18.06 22.99h1.66c.84 0 1.53-.64 1.63-1.46L23 5.05h-5V1h-1.97v4.05h-4.97l.3 2.34c1.71.47 3.31 1.32 4.27 2.26 1.44 1.42 2.43 2.89 2.43 5.29v8.05zM1 21.99V21h15.03v.99c0 .55-.45 1-1.01 1H2.01c-.56 0-1.01-.45-1.01-1zm15.03-7c0-8.07-6.72-6-6.72-6s-6.72-2.07-6.72 6h13.44z”,
-logout:“M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z”,
-report:“M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z”,
-print:“M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z”,
-settings:“M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z”,
-package:“M20 7L12 3 4 7v10l8 4 8-4V7zm-8 1.5L17.5 11 12 13.5 6.5 11 12 8.5z”,
-};
-return <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d={paths[name]||paths.info}/></svg>;
-};
+// Hitung HPP produk = sum(hpp_komponen * qty) + biaya_ops
+function hppProduk(produk, komponen, bahan, biayaOps) {
+  let hpp_komponen = 0;
+  produk.komposisi.forEach(k => {
+    if (k.tipe === "komponen") {
+      hpp_komponen += hppKomponen(k.item_id, komponen, bahan) * k.qty;
+    } else if (k.tipe === "bahan") {
+      const b = bahan.find(x => x.id === k.item_id);
+      hpp_komponen += b ? k.qty * b.harga_per_satuan : 0;
+    }
+  });
+  const ops = Object.values(biayaOps).reduce((a,b)=>a+Number(b),0);
+  return { hpp_komponen: Math.round(hpp_komponen), ops, hpp_total: Math.round(hpp_komponen + ops) };
+}
+
+// Hitung berapa porsi produk bisa dibuat dari stok saat ini
+function hitungPorsiProduk(produk, komponen, bahan) {
+  // Kumpulkan kebutuhan bahan total per porsi produk
+  const kebutuhan = {}; // bahan_id → qty_per_porsi
+  function collectBahan(detail, multiplier, visited) {
+    detail.forEach(d => {
+      if (d.tipe === "bahan") {
+        kebutuhan[d.item_id] = (kebutuhan[d.item_id] || 0) + d.qty * multiplier;
+      } else if (d.tipe === "komponen" && !visited.has(d.item_id)) {
+        const ko = komponen.find(k => k.id === d.item_id);
+        if (!ko) return;
+        const yp = ko.yield_mode === "batch" ? (ko.yield_porsi || 1) : 1;
+        const newVisited = new Set(visited); newVisited.add(d.item_id);
+        collectBahan(ko.detail, multiplier * d.qty / yp, newVisited);
+      }
+    });
+  }
+  produk.komposisi.forEach(k => {
+    if (k.tipe === "komponen") {
+      const ko = komponen.find(x => x.id === k.item_id);
+      if (!ko) return;
+      const yp = ko.yield_mode === "batch" ? (ko.yield_porsi || 1) : 1;
+      collectBahan(ko.detail, k.qty / yp, new Set([k.item_id]));
+    } else if (k.tipe === "bahan") {
+      kebutuhan[k.item_id] = (kebutuhan[k.item_id] || 0) + k.qty;
+    }
+  });
+  let min = Infinity;
+  Object.entries(kebutuhan).forEach(([bid, qpp]) => {
+    const b = bahan.find(x => x.id === bid);
+    if (!b || qpp <= 0) return;
+    const p = Math.floor(b.stok_saat_ini / qpp);
+    if (p < min) min = p;
+  });
+  return { porsi: min === Infinity ? 0 : min, kebutuhan };
+}
+
+// Kurangi stok bahan saat transaksi
+function kurangStokBahan(produkList, bahan, komponen, setBahan) {
+  // produkList: [{produk_id, qty}]
+  const pengurangan = {}; // bahan_id → total qty dikurangi
+  produkList.forEach(({ produk_id, qty, produk_obj }) => {
+    const pr = produk_obj;
+    if (!pr) return;
+    function collectBahan(detail, multiplier, visited) {
+      detail.forEach(d => {
+        if (d.tipe === "bahan") {
+          pengurangan[d.item_id] = (pengurangan[d.item_id] || 0) + d.qty * multiplier;
+        } else if (d.tipe === "komponen" && !visited.has(d.item_id)) {
+          const ko = komponen.find(k => k.id === d.item_id);
+          if (!ko) return;
+          const yp = ko.yield_mode === "batch" ? (ko.yield_porsi || 1) : 1;
+          const nv = new Set(visited); nv.add(d.item_id);
+          collectBahan(ko.detail, multiplier * d.qty / yp, nv);
+        }
+      });
+    }
+    pr.komposisi.forEach(k => {
+      if (k.tipe === "komponen") {
+        const ko = komponen.find(x => x.id === k.item_id);
+        if (!ko) return;
+        const yp = ko.yield_mode === "batch" ? (ko.yield_porsi || 1) : 1;
+        collectBahan(ko.detail, qty * k.qty / yp, new Set([k.item_id]));
+      } else if (k.tipe === "bahan") {
+        pengurangan[k.item_id] = (pengurangan[k.item_id] || 0) + k.qty * qty;
+      }
+    });
+  });
+  setBahan(prev => prev.map(b => ({
+    ...b,
+    stok_saat_ini: Math.max(0, b.stok_saat_ini - (pengurangan[b.id] || 0))
+  })));
+}
+
+function getWarna(pct) {
+  if (pct >= 70) return { bg:"#22c55e", text:"#15803d", light:"#dcfce7", label:"Aman" };
+  if (pct >= 30) return { bg:"#f59e0b", text:"#b45309", light:"#fef3c7", label:"Warning" };
+  return { bg:"#ef4444", text:"#b91c1c", light:"#fee2e2", label:"Kritis" };
+}
 
 // ─── STYLE HELPERS ────────────────────────────────────────────────────────────
-const inputStyle = { width:“100%”,background:”#0f0f18”,border:“1.5px solid #2a2a3e”,borderRadius:10,padding:“10px 14px”,color:”#e2e8f0”,fontSize:14,fontFamily:”‘Nunito’,sans-serif”,outline:“none”,boxSizing:“border-box”,marginBottom:0 };
-const labelStyle = { fontSize:11,fontWeight:700,color:”#6b7280”,letterSpacing:0.5,display:“block”,marginBottom:5,textTransform:“uppercase” };
-const btnStyle = (bg) => ({ display:“inline-flex”,alignItems:“center”,gap:6,background:bg,border:“none”,borderRadius:10,padding:“8px 14px”,color:”#fff”,fontSize:13,fontWeight:700,cursor:“pointer”,fontFamily:”‘Nunito’,sans-serif” });
+const IS = { width:"100%",background:"#0f0f18",border:"1.5px solid #2a2a3e",borderRadius:10,padding:"10px 14px",color:"#e2e8f0",fontSize:14,fontFamily:"'Nunito',sans-serif",outline:"none",boxSizing:"border-box",marginBottom:0 };
+const LS = { fontSize:11,fontWeight:700,color:"#6b7280",letterSpacing:0.5,display:"block",marginBottom:5,textTransform:"uppercase" };
+const BS = bg => ({ display:"inline-flex",alignItems:"center",gap:6,background:bg,border:"none",borderRadius:10,padding:"8px 14px",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito',sans-serif" });
 
-function Card({children,bg}) { return <div style={{background:bg,borderRadius:16,padding:“16px”}}>{children}</div>; }
-function SectionTitle({children}) { return <div style={{fontSize:12,fontWeight:800,color:”#6b7280”,marginBottom:10,letterSpacing:1,textTransform:“uppercase”}}>{children}</div>; }
-function FormGroup({label,children}) { return <div style={{marginBottom:10}}><label style={labelStyle}>{label}</label>{children}</div>; }
-function Row({label,value,bold,small}) {
-return <div style={{display:“flex”,justifyContent:“space-between”,marginBottom:6}}>
-<span style={{fontSize:small?12:13,color:”#9ca3af”}}>{label}</span>
-<span style={{fontSize:small?12:14,fontWeight:bold?800:600,color:bold?”#e2e8f0”:”#94a3b8”,fontFamily:bold?”‘Space Mono’”:“inherit”}}>{value}</span>
+const Icon = ({name,size=20,color="currentColor"}) => {
+  const P = {
+    dashboard:"M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z",
+    bahan:"M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3z",
+    komponen:"M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z",
+    produk:"M18.06 22.99h1.66c.84 0 1.53-.64 1.63-1.46L23 5.05h-5V1h-1.97v4.05h-4.97l.3 2.34c1.71.47 3.31 1.32 4.27 2.26 1.44 1.42 2.43 2.89 2.43 5.29v8.05zM1 21.99V21h15.03v.99c0 .55-.45 1-1.01 1H2.01c-.56 0-1.01-.45-1.01-1zm15.03-7c0-8.07-6.72-6-6.72-6s-6.72-2.07-6.72 6h13.44z",
+    kasir:"M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96C5 16.1 6.1 17 7 17h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63H19c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0 0 23.48 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z",
+    laporan:"M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z",
+    plus:"M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z",
+    edit:"M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z",
+    trash:"M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",
+    check:"M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z",
+    back:"M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z",
+    close:"M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z",
+    bell:"M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z",
+    logout:"M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z",
+    print:"M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z",
+    info:"M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z",
+    settings:"M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z",
+  };
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d={P[name]||P.info}/></svg>;
+};
 
+function FG({label,children}) { return <div style={{marginBottom:10}}><label style={LS}>{label}</label>{children}</div>; }
+function ST({children,mt}) { return <div style={{fontSize:12,fontWeight:800,color:"#6b7280",marginBottom:10,letterSpacing:1,textTransform:"uppercase",marginTop:mt||0}}>{children}</div>; }
+function Empty({t}) { return <div style={{textAlign:"center",padding:"24px",color:"#4b5563",fontSize:13}}>{t}</div>; }
+function Card({children,bg}) { return <div style={{background:bg,borderRadius:16,padding:"16px"}}>{children}</div>; }
+function R({label,value,bold,sm}) {
+  return <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+    <span style={{fontSize:sm?11:13,color:"#9ca3af"}}>{label}</span>
+    <span style={{fontSize:sm?11:14,fontWeight:bold?800:600,color:bold?"#e2e8f0":"#94a3b8",fontFamily:bold?"'Space Mono'":"inherit"}}>{value}</span>
   </div>;
 }
-function EmptyState({text}) { return <div style={{textAlign:"center",padding:"24px",color:"#4b5563",fontSize:13}}>{text}</div>; }
-
-const UNIT_KONVERSI = {“gram”:1,“kg”:1000,“ml”:1,“liter”:1000,“pcs”:1,“lusin (12)”:12,“kodi (20)”:20,“gross (144)”:144};
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 function App() {
-const [activeTab, setActiveTab] = useState(“dashboard”);
-const [showNotif, setShowNotif] = useState(false);
-const [showReset, setShowReset] = useState(false);
-const [notifikasi, setNotifikasi] = useState([]);
+  const [tab, setTab] = useState("dashboard");
+  const [showReset, setShowReset] = useState(false);
+  const [showNotif, setShowNotif] = useState(false);
+  const [notif, setNotif] = useState([]);
 
-const [menus, setMenus] = useLocalStorage(“restoku_menus”, SEED_MENUS);
-const [stok, setStok] = useLocalStorage(“restoku_stok”, SEED_STOK);
-const [transaksi, setTransaksi] = useLocalStorage(“restoku_transaksi”, SEED_TRANSAKSI);
-const [perlengkapan, setPerlengkapan] = useLocalStorage(“restoku_perlengkapan”, SEED_PERLENGKAPAN);
-const [biayaOps, setBiayaOps] = useLocalStorage(“restoku_biaya_ops”, SEED_BIAYA_OPS);
-const [paket, setPaket] = useLocalStorage(“restoku_paket”, SEED_PAKET);
+  const [bahan, setBahan] = useLS("rk2_bahan", SEED_BAHAN);
+  const [komponen, setKomponen] = useLS("rk2_komponen", SEED_KOMPONEN);
+  const [produk, setProduk] = useLS("rk2_produk", SEED_PRODUK);
+  const [transaksi, setTransaksi] = useLS("rk2_transaksi", SEED_TRANSAKSI);
+  const [perlengkapan, setPerlengkapan] = useLS("rk2_perlengkapan", SEED_PERLENGKAPAN);
+  const [biayaOps, setBiayaOps] = useLS("rk2_biaya_ops", SEED_BIAYA_OPS);
+  const [paket, setPaket] = useLS("rk2_paket", SEED_PAKET);
 
-const allBahan = useCallback(() => {
-const map = {};
-menus.forEach(m => m.bahan.forEach(b => { if(!map[b.bahan_id]) map[b.bahan_id]={id:b.bahan_id,nama:b.nama,satuan:b.satuan}; }));
-return map;
-}, [menus]);
+  useEffect(() => {
+    const kritis = bahan.filter(b => b.stok_awal > 0 && Math.round((b.stok_saat_ini/b.stok_awal)*100) < 30);
+    setNotif(kritis);
+  }, [bahan]);
 
-useEffect(() => {
-const kritis = Object.entries(stok).filter(([,s])=>getStokPersen(s)<30).map(([id,s])=>({id,nama:s.nama,pct:getStokPersen(s)}));
-setNotifikasi(kritis);
-}, [stok]);
+  const addTransaksi = (tx, itemsList) => {
+    kurangStokBahan(itemsList, bahan, komponen, setBahan);
+    setTransaksi(prev => [tx, ...prev]);
+  };
 
-const reduceStok = (items) => {
-setStok(prev => {
-const next = {…prev};
-items.forEach(({menu_id,qty,perlengkapan_ids}) => {
-// Kurangi bahan menu
-const menu = menus.find(m=>m.id===menu_id);
-if(menu) menu.bahan.forEach(b => {
-if(next[b.bahan_id]) next[b.bahan_id]={…next[b.bahan_id],stok_saat_ini:Math.max(0,next[b.bahan_id].stok_saat_ini-b.qty*qty)};
-});
-});
-return next;
-});
-// Kurangi perlengkapan
-items.forEach(item => {
-if(item.perlengkapan_ids && item.perlengkapan_ids.length>0) {
-setPerlengkapan(prev => {
-const next={…prev};
-item.perlengkapan_ids.forEach(pid => {
-if(next[pid]) next[pid]={…next[pid],stok_saat_ini:Math.max(0,next[pid].stok_saat_ini-item.qty)};
-});
-return next;
-});
-}
-});
-};
+  const tabs = [
+    {id:"dashboard",label:"Dashboard",icon:"dashboard"},
+    {id:"bahan",label:"Bahan",icon:"bahan"},
+    {id:"komponen",label:"Komponen",icon:"komponen"},
+    {id:"produk",label:"Produk",icon:"produk"},
+    {id:"kasir",label:"Kasir",icon:"kasir"},
+  ];
 
-const addTransaksi = (t) => {
-reduceStok(t.items);
-setTransaksi(prev=>[t,…prev]);
-};
+  return (
+    <div style={{fontFamily:"'Nunito',sans-serif",background:"#0f0f14",minHeight:"100vh",display:"flex",justifyContent:"center"}}>
+      <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+      <div style={{width:"100%",maxWidth:430,background:"#141418",minHeight:"100vh",display:"flex",flexDirection:"column"}}>
 
-const tabItems = [
-{id:“dashboard”,label:“Dashboard”,icon:“dashboard”},
-{id:“menu”,label:“Menu”,icon:“food”},
-{id:“stok”,label:“Stok”,icon:“stock”},
-{id:“kasir”,label:“Kasir”,icon:“cashier”},
-{id:“laporan”,label:“Laporan”,icon:“report”},
-];
-const notifCount = notifikasi.length;
-
-return (
-<div style={{fontFamily:”‘Nunito’,sans-serif”,background:”#0f0f14”,minHeight:“100vh”,display:“flex”,justifyContent:“center”}}>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
-<div style={{width:“100%”,maxWidth:430,background:”#141418”,minHeight:“100vh”,display:“flex”,flexDirection:“column”}}>
-
-```
-    {/* TOPBAR */}
-    <div style={{background:"linear-gradient(135deg,#1a1a2e,#16213e)",padding:"16px 20px 12px",borderBottom:"1px solid #2a2a3e",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:100}}>
-      <div>
-        <div style={{fontFamily:"'Space Mono',monospace",fontSize:11,color:"#6366f1",fontWeight:700,letterSpacing:3,textTransform:"uppercase"}}>RestoKu</div>
-        <div style={{fontSize:18,fontWeight:900,color:"#fff",lineHeight:1.1}}>
-          {activeTab==="dashboard"&&"Dashboard"}{activeTab==="menu"&&"Manajemen Menu"}{activeTab==="stok"&&"Manajemen Stok"}{activeTab==="kasir"&&"Kasir"}{activeTab==="laporan"&&"Laporan Keuangan"}
-        </div>
-      </div>
-      <div style={{display:"flex",gap:8,alignItems:"center"}}>
-        <button onClick={()=>setShowNotif(!showNotif)} style={{position:"relative",background:notifCount>0?"#1e1b4b":"#1f1f2e",border:"none",borderRadius:12,padding:"8px 10px",cursor:"pointer",display:"flex",alignItems:"center"}}>
-          <Icon name="bell" size={22} color={notifCount>0?"#f59e0b":"#6b7280"}/>
-          {notifCount>0&&<span style={{position:"absolute",top:4,right:4,background:"#ef4444",color:"#fff",fontSize:9,fontWeight:800,borderRadius:"50%",width:16,height:16,display:"flex",alignItems:"center",justifyContent:"center"}}>{notifCount}</span>}
-        </button>
-        <button onClick={()=>setShowReset(true)} style={{background:"#1f1f2e",border:"none",borderRadius:12,padding:"8px 10px",cursor:"pointer",display:"flex",alignItems:"center"}}>
-          <Icon name="logout" size={20} color="#4b5563"/>
-        </button>
-      </div>
-    </div>
-
-    {showNotif&&(
-      <div style={{background:"#1a1a2e",borderBottom:"1px solid #2a2a3e",padding:"12px 20px"}}>
-        <div style={{fontSize:12,fontWeight:800,color:"#f59e0b",marginBottom:8,letterSpacing:1,textTransform:"uppercase"}}>⚠ Stok Kritis</div>
-        {notifCount===0?<div style={{fontSize:13,color:"#6b7280"}}>Semua stok aman ✓</div>:notifikasi.map(n=>(
-          <div key={n.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 10px",background:"#2d1b1b",borderRadius:8,marginBottom:4}}>
-            <span style={{fontSize:13,color:"#fca5a5",fontWeight:700}}>{n.nama}</span>
-            <span style={{fontSize:12,color:"#ef4444",fontWeight:800}}>{n.pct}%</span>
+        {/* TOPBAR */}
+        <div style={{background:"linear-gradient(135deg,#1a1a2e,#16213e)",padding:"14px 20px 10px",borderBottom:"1px solid #2a2a3e",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:100}}>
+          <div>
+            <div style={{fontFamily:"'Space Mono'",fontSize:10,color:"#6366f1",fontWeight:700,letterSpacing:3}}>RESTU KU v2</div>
+            <div style={{fontSize:17,fontWeight:900,color:"#fff",lineHeight:1.1}}>
+              {{dashboard:"Dashboard",bahan:"Bahan Baku",komponen:"Komponen / Resep",produk:"Produk",kasir:"Kasir",laporan:"Laporan"}[tab]}
+            </div>
           </div>
-        ))}
-      </div>
-    )}
-
-    {showReset&&(
-      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
-        <div style={{background:"#1a1a24",borderRadius:20,padding:24,width:"100%",maxWidth:340}}>
-          <div style={{fontSize:18,fontWeight:900,color:"#ef4444",marginBottom:8}}>⚠️ Reset Data?</div>
-          <div style={{fontSize:14,color:"#9ca3af",marginBottom:20,lineHeight:1.6}}>Semua data akan dihapus dan kembali ke awal. Tidak bisa dibatalkan.</div>
-          <div style={{display:"flex",gap:10}}>
-            <button onClick={()=>setShowReset(false)} style={{flex:1,padding:"12px",background:"#2a2a3e",border:"none",borderRadius:12,color:"#e2e8f0",fontSize:14,fontWeight:700,cursor:"pointer"}}>Batal</button>
-            <button onClick={clearAllData} style={{flex:1,padding:"12px",background:"#7f1d1d",border:"none",borderRadius:12,color:"#fca5a5",fontSize:14,fontWeight:700,cursor:"pointer"}}>Ya, Reset</button>
+          <div style={{display:"flex",gap:6}}>
+            <button onClick={()=>setShowNotif(!showNotif)} style={{position:"relative",background:notif.length?"#1e1b4b":"#1f1f2e",border:"none",borderRadius:10,padding:"7px 9px",cursor:"pointer",display:"flex"}}>
+              <Icon name="bell" size={20} color={notif.length?"#f59e0b":"#6b7280"}/>
+              {notif.length>0&&<span style={{position:"absolute",top:3,right:3,background:"#ef4444",color:"#fff",fontSize:8,fontWeight:800,borderRadius:"50%",width:14,height:14,display:"flex",alignItems:"center",justifyContent:"center"}}>{notif.length}</span>}
+            </button>
+            <button onClick={()=>setTab("laporan")} style={{background:tab==="laporan"?"#6366f1":"#1f1f2e",border:"none",borderRadius:10,padding:"7px 9px",cursor:"pointer",display:"flex"}}>
+              <Icon name="laporan" size={20} color={tab==="laporan"?"#fff":"#6b7280"}/>
+            </button>
+            <button onClick={()=>setShowReset(true)} style={{background:"#1f1f2e",border:"none",borderRadius:10,padding:"7px 9px",cursor:"pointer",display:"flex"}}>
+              <Icon name="logout" size={20} color="#4b5563"/>
+            </button>
           </div>
         </div>
-      </div>
-    )}
 
-    <div style={{background:"#0a0a0f",padding:"4px 20px",display:"flex",alignItems:"center",gap:6}}>
-      <div style={{width:6,height:6,borderRadius:"50%",background:"#22c55e"}}/>
-      <span style={{fontSize:10,color:"#374151",fontFamily:"'Space Mono'"}}>Data tersimpan di perangkat ini</span>
-    </div>
-
-    <div style={{flex:1,overflowY:"auto",paddingBottom:80}}>
-      {activeTab==="dashboard"&&<DashboardPage stok={stok} transaksi={transaksi} menus={menus} paket={paket} biayaOps={biayaOps}/>}
-      {activeTab==="menu"&&<MenuPage menus={menus} setMenus={setMenus} stok={stok} setStok={setStok} allBahan={allBahan} biayaOps={biayaOps} setBiayaOps={setBiayaOps} paket={paket} setPaket={setPaket}/>}
-      {activeTab==="stok"&&<StokPage stok={stok} setStok={setStok} allBahan={allBahan} perlengkapan={perlengkapan} setPerlengkapan={setPerlengkapan}/>}
-      {activeTab==="kasir"&&<KasirPage menus={menus} paket={paket} addTransaksi={addTransaksi} stok={stok} perlengkapan={perlengkapan}/>}
-      {activeTab==="laporan"&&<LaporanPage transaksi={transaksi} menus={menus} paket={paket}/>}
-    </div>
-
-    <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,background:"#0f0f14",borderTop:"1px solid #1f1f2e",display:"flex",zIndex:100,padding:"8px 0 12px"}}>
-      {tabItems.map(t=>{const active=activeTab===t.id;return(
-        <button key={t.id} onClick={()=>setActiveTab(t.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",padding:"4px 0"}}>
-          <div style={{width:40,height:36,borderRadius:12,background:active?"#6366f1":"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s"}}>
-            <Icon name={t.icon} size={20} color={active?"#fff":"#4b5563"}/>
+        {showNotif&&(
+          <div style={{background:"#1a1a2e",borderBottom:"1px solid #2a2a3e",padding:"12px 20px"}}>
+            <div style={{fontSize:11,fontWeight:800,color:"#f59e0b",marginBottom:8,letterSpacing:1,textTransform:"uppercase"}}>⚠ Bahan Baku Kritis</div>
+            {notif.length===0?<div style={{fontSize:13,color:"#6b7280"}}>Semua stok aman ✓</div>:notif.map(b=>{
+              const pct=Math.round((b.stok_saat_ini/b.stok_awal)*100);
+              return <div key={b.id} style={{display:"flex",justifyContent:"space-between",padding:"5px 10px",background:"#2d1b1b",borderRadius:8,marginBottom:4}}>
+                <span style={{fontSize:13,color:"#fca5a5",fontWeight:700}}>{b.nama}</span>
+                <span style={{fontSize:12,color:"#ef4444",fontWeight:800}}>{pct}%</span>
+              </div>;
+            })}
           </div>
-          <span style={{fontSize:9,fontWeight:active?800:600,color:active?"#6366f1":"#4b5563",letterSpacing:0.3}}>{t.label}</span>
-        </button>
-      );})}
-    </div>
-  </div>
-</div>
-```
+        )}
 
-);
+        {showReset&&(
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+            <div style={{background:"#1a1a24",borderRadius:20,padding:24,width:"100%",maxWidth:340}}>
+              <div style={{fontSize:18,fontWeight:900,color:"#ef4444",marginBottom:8}}>⚠️ Reset Semua Data?</div>
+              <div style={{fontSize:13,color:"#9ca3af",marginBottom:20,lineHeight:1.7}}>Semua data bahan, komponen, produk, dan transaksi akan dihapus. Tidak bisa dibatalkan.</div>
+              <div style={{display:"flex",gap:10}}>
+                <button onClick={()=>setShowReset(false)} style={{flex:1,padding:"12px",background:"#2a2a3e",border:"none",borderRadius:12,color:"#e2e8f0",fontSize:14,fontWeight:700,cursor:"pointer"}}>Batal</button>
+                <button onClick={resetAll} style={{flex:1,padding:"12px",background:"#7f1d1d",border:"none",borderRadius:12,color:"#fca5a5",fontSize:14,fontWeight:700,cursor:"pointer"}}>Reset</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div style={{background:"#0a0a0f",padding:"3px 20px",display:"flex",alignItems:"center",gap:5}}>
+          <div style={{width:5,height:5,borderRadius:"50%",background:"#22c55e"}}/>
+          <span style={{fontSize:9,color:"#374151",fontFamily:"'Space Mono'"}}>Bahan → Komponen → Produk | Data tersimpan lokal</span>
+        </div>
+
+        <div style={{flex:1,overflowY:"auto",paddingBottom:80}}>
+          {tab==="dashboard"&&<DashboardPage bahan={bahan} komponen={komponen} produk={produk} transaksi={transaksi} biayaOps={biayaOps}/>}
+          {tab==="bahan"&&<BahanPage bahan={bahan} setBahan={setBahan} biayaOps={biayaOps} setBiayaOps={setBiayaOps} perlengkapan={perlengkapan} setPerlengkapan={setPerlengkapan}/>}
+          {tab==="komponen"&&<KomponenPage komponen={komponen} setKomponen={setKomponen} bahan={bahan}/>}
+          {tab==="produk"&&<ProdukPage produk={produk} setProduk={setProduk} komponen={komponen} bahan={bahan} biayaOps={biayaOps} paket={paket} setPaket={setPaket}/>}
+          {tab==="kasir"&&<KasirPage produk={produk} paket={paket} komponen={komponen} bahan={bahan} addTransaksi={addTransaksi} perlengkapan={perlengkapan} setPerlengkapan={setPerlengkapan}/>}
+          {tab==="laporan"&&<LaporanPage transaksi={transaksi} produk={produk} paket={paket}/>}
+        </div>
+
+        <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,background:"#0f0f14",borderTop:"1px solid #1f1f2e",display:"flex",zIndex:100,padding:"6px 0 10px"}}>
+          {tabs.map(t=>{const a=tab===t.id;return(
+            <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"none",border:"none",cursor:"pointer",padding:"3px 0"}}>
+              <div style={{width:38,height:34,borderRadius:10,background:a?"#6366f1":"transparent",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .2s"}}>
+                <Icon name={t.icon} size={19} color={a?"#fff":"#4b5563"}/>
+              </div>
+              <span style={{fontSize:9,fontWeight:a?800:600,color:a?"#6366f1":"#4b5563"}}>{t.label}</span>
+            </button>
+          );})}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function DashboardPage({stok,transaksi,menus,paket,biayaOps}) {
-const today = new Date().toDateString();
-const todayTx = transaksi.filter(t=>new Date(t.waktu).toDateString()===today);
-const totalHarian = todayTx.reduce((a,t)=>a+t.total,0);
-const menuCount={};
-transaksi.forEach(t=>t.items.forEach(i=>{menuCount[i.nama]=(menuCount[i.nama]||0)+i.qty;}));
-const terlaris=Object.entries(menuCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
-const allMenus=[…menus,…paket];
-const porsiData=menus.map(m=>({…m,porsi:hitungPorsi(m,stok),bottleneck:bottleneckBahan(m,stok)})).sort((a,b)=>a.porsi-b.porsi);
-const totalPorsi=porsiData.reduce((a,m)=>a+m.porsi,0);
-const menuHabis=porsiData.filter(m=>m.porsi===0).length;
-const menuKritis=porsiData.filter(m=>m.porsi>0&&m.porsi<=5).length;
+function DashboardPage({bahan,komponen,produk,transaksi,biayaOps}) {
+  const today=new Date().toDateString();
+  const todayTx=transaksi.filter(t=>new Date(t.waktu).toDateString()===today);
+  const totalHarian=todayTx.reduce((a,t)=>a+t.total,0);
+  const menuCount={};
+  transaksi.forEach(t=>t.items.forEach(i=>{menuCount[i.nama]=(menuCount[i.nama]||0)+i.qty;}));
+  const terlaris=Object.entries(menuCount).sort((a,b)=>b[1]-a[1]).slice(0,3);
 
-return (
-<div style={{padding:“16px 20px”}}>
-<div style={{display:“grid”,gridTemplateColumns:“1fr 1fr”,gap:12,marginBottom:20}}>
-<Card bg="linear-gradient(135deg,#6366f1,#8b5cf6)">
-<div style={{fontSize:11,color:“rgba(255,255,255,.7)”,fontWeight:700,letterSpacing:1,textTransform:“uppercase”}}>Penjualan Hari Ini</div>
-<div style={{fontSize:22,fontWeight:900,color:”#fff”,marginTop:4}}>{fmt(totalHarian)}</div>
-<div style={{fontSize:11,color:“rgba(255,255,255,.6)”,marginTop:2}}>{todayTx.length} transaksi</div>
-</Card>
-<Card bg={menuHabis>0?“linear-gradient(135deg,#7f1d1d,#991b1b)”:menuKritis>0?“linear-gradient(135deg,#78350f,#92400e)”:“linear-gradient(135deg,#14532d,#166534)”}>
-<div style={{fontSize:11,color:“rgba(255,255,255,.7)”,fontWeight:700,letterSpacing:1,textTransform:“uppercase”}}>Kapasitas Produksi</div>
-<div style={{fontSize:22,fontWeight:900,color:”#fff”,marginTop:4}}>{totalPorsi} porsi</div>
-<div style={{fontSize:11,color:“rgba(255,255,255,.6)”,marginTop:2}}>{menuHabis>0?`⛔ ${menuHabis} menu habis`:menuKritis>0?`⚠ ${menuKritis} hampir habis`:`✓ ${menus.length} menu tersedia`}</div>
-</Card>
-</div>
+  const porsiData = produk.map(pr => {
+    const {porsi} = hitungPorsiProduk(pr, komponen, bahan);
+    const hpp = hppProduk(pr, komponen, bahan, biayaOps);
+    return {...pr, porsi, hpp_total: hpp.hpp_total};
+  }).sort((a,b)=>a.porsi-b.porsi);
 
-```
-  <SectionTitle>🍽️ Estimasi Porsi dari Stok</SectionTitle>
-  <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
-    {porsiData.map(m=>{
-      const porsiMax=Math.max(...porsiData.map(x=>x.porsi),1);
-      const barPct=Math.min(100,Math.round((m.porsi/porsiMax)*100));
-      const warna=m.porsi===0?"#ef4444":m.porsi<=5?"#f59e0b":"#22c55e";
-      const warnaLight=m.porsi===0?"#fee2e2":m.porsi<=5?"#fef3c7":"#dcfce7";
-      const warnaText=m.porsi===0?"#b91c1c":m.porsi<=5?"#b45309":"#15803d";
-      const label=m.porsi===0?"Habis":m.porsi<=5?"Hampir habis":"Tersedia";
-      return (
-        <div key={m.id} style={{background:"#1a1a24",borderRadius:14,padding:"12px 16px"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-            <div>
-              <div style={{fontSize:14,fontWeight:800,color:"#e2e8f0"}}>{m.nama}</div>
-              <div style={{fontSize:11,color:"#4b5563",marginTop:1}}>{m.porsi===0?`⛔ Kurang: ${m.bottleneck}`:m.porsi<=5?`⚠ Min. bahan: ${m.bottleneck}`:`Pembatas: ${m.bottleneck}`}</div>
-            </div>
-            <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:3}}>
-              <span style={{fontFamily:"'Space Mono'",fontSize:18,fontWeight:900,color:warna,lineHeight:1}}>{m.porsi}</span>
-              <span style={{fontSize:10,background:warnaLight,color:warnaText,padding:"1px 7px",borderRadius:20,fontWeight:800}}>{label}</span>
-            </div>
-          </div>
-          <div style={{background:"#0f0f18",borderRadius:6,height:6,overflow:"hidden"}}>
-            <div style={{width:`${barPct}%`,height:"100%",background:warna,borderRadius:6,transition:"width .5s ease"}}/>
-          </div>
-        </div>
-      );
-    })}
-  </div>
+  const totalPorsi=porsiData.reduce((a,p)=>a+p.porsi,0);
+  const habis=porsiData.filter(p=>p.porsi===0).length;
+  const kritis=porsiData.filter(p=>p.porsi>0&&p.porsi<=5).length;
 
-  <SectionTitle>📊 Status Stok Real-time</SectionTitle>
-  <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:20}}>
-    {Object.entries(stok).map(([id,s])=>{
-      const pct=getStokPersen(s);const w=getStokWarna(pct);
-      return (
-        <div key={id} style={{background:"#1a1a24",borderRadius:14,padding:"12px 16px"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-            <span style={{fontSize:14,fontWeight:700,color:"#e2e8f0"}}>{s.nama}</span>
-            <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <span style={{fontSize:12,background:w.light,color:w.text,padding:"2px 8px",borderRadius:20,fontWeight:800}}>{w.label}</span>
-              <span style={{fontFamily:"'Space Mono'",fontSize:13,color:w.bg,fontWeight:700}}>{pct}%</span>
-            </div>
-          </div>
-          <div style={{background:"#0f0f18",borderRadius:6,height:8,overflow:"hidden"}}>
-            <div style={{width:`${pct}%`,height:"100%",background:w.bg,borderRadius:6,transition:"width .5s ease"}}/>
-          </div>
-          <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
-            <span style={{fontSize:10,color:"#6b7280"}}>{fmtStokQty(s)}</span>
-            <span style={{fontSize:10,color:"#4b5563"}}>dari {fmtStokQty(s,"stok_awal")}</span>
-          </div>
-        </div>
-      );
-    })}
-  </div>
-
-  <SectionTitle>🔥 Menu Terlaris</SectionTitle>
-  <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:20}}>
-    {terlaris.length===0?<EmptyState text="Belum ada transaksi"/>:terlaris.map(([nama,qty],i)=>(
-      <div key={nama} style={{background:"#1a1a24",borderRadius:12,padding:"10px 16px",display:"flex",alignItems:"center",gap:12}}>
-        <div style={{width:28,height:28,background:["#f59e0b","#94a3b8","#cd7c2f"][i]||"#2a2a3e",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Space Mono'",fontSize:12,fontWeight:700,color:"#fff"}}>{i+1}</div>
-        <div style={{flex:1,fontSize:14,fontWeight:700,color:"#e2e8f0"}}>{nama}</div>
-        <div style={{fontFamily:"'Space Mono'",fontSize:13,color:"#6366f1",fontWeight:700}}>{qty}x</div>
-      </div>
-    ))}
-  </div>
-
-  <SectionTitle>🧾 Transaksi Terakhir</SectionTitle>
-  {transaksi.slice(0,5).map(t=>(
-    <div key={t.id} style={{background:"#1a1a24",borderRadius:12,padding:"10px 16px",marginBottom:8}}>
-      <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-        <span style={{fontSize:12,color:"#6b7280",fontFamily:"'Space Mono'"}}>{fmtJam(t.waktu)}</span>
-        <span style={{fontSize:14,fontWeight:800,color:"#22c55e"}}>{fmt(t.total)}</span>
-      </div>
-      <div style={{fontSize:12,color:"#9ca3af"}}>{t.items.map(i=>`${i.nama} ×${i.qty}`).join(", ")}</div>
-    </div>
-  ))}
-</div>
-```
-
-);
-}
-
-// ─── MENU PAGE ────────────────────────────────────────────────────────────────
-function MenuPage({menus,setMenus,stok,setStok,allBahan,biayaOps,setBiayaOps,paket,setPaket}) {
-const [subTab, setSubTab] = useState(“menu”); // menu | paket | biaya
-const [view, setView] = useState(“list”);
-const [editMenu, setEditMenu] = useState(null);
-const [hppView, setHppView] = useState(null);
-const [editPaket, setEditPaket] = useState(null);
-
-const deleteMenu = (id) => setMenus(prev=>prev.filter(m=>m.id!==id));
-const saveMenu = (menu) => {
-if(menu.id&&menus.find(m=>m.id===menu.id)) setMenus(prev=>prev.map(m=>m.id===menu.id?menu:m));
-else setMenus(prev=>[…prev,{…menu,id:“m”+uid()}]);
-const newBahan={};
-[…menus,menu].forEach(m=>m.bahan.forEach(b=>{
-if(!stok[b.bahan_id]&&!newBahan[b.bahan_id]) newBahan[b.bahan_id]={nama:b.nama,stok_awal:0,stok_saat_ini:0,satuan:b.satuan,harga_beli_per_gram:0,harga_beli_per_unit:0,unit_qty:1000,riwayat:[]};
-}));
-if(Object.keys(newBahan).length>0) setStok(prev=>({…prev,…newBahan}));
-setView(“list”); setEditMenu(null);
-};
-const savePaket = (p) => {
-if(p.id&&paket.find(x=>x.id===p.id)) setPaket(prev=>prev.map(x=>x.id===p.id?p:x));
-else setPaket(prev=>[…prev,{…p,id:“pk”+uid()}]);
-setEditPaket(null);
-};
-
-if(hppView) return <HppView menu={hppView} stok={stok} biayaOps={biayaOps} onBack={()=>setHppView(null)}/>;
-if(view===“form”) return <MenuForm menu={editMenu} stok={stok} biayaOps={biayaOps} onSave={saveMenu} onBack={()=>{setView(“list”);setEditMenu(null);}}/>;
-if(editPaket!==null) return <PaketForm paket={editPaket===false?null:editPaket} menus={menus} onSave={savePaket} onBack={()=>setEditPaket(null)}/>;
-
-const kategoris=[…new Set(menus.map(m=>m.kategori))];
-
-return (
-<div style={{padding:“0 0 16px”}}>
-{/* Sub tabs */}
-<div style={{display:“flex”,borderBottom:“1px solid #2a2a3e”,marginBottom:16}}>
-{[[“menu”,“Menu”],[“paket”,“Paket”],[“biaya”,“Biaya Ops”]].map(([id,lbl])=>(
-<button key={id} onClick={()=>setSubTab(id)} style={{flex:1,padding:“12px 0”,background:“none”,border:“none”,borderBottom:subTab===id?“2px solid #6366f1”:“2px solid transparent”,color:subTab===id?”#6366f1”:”#6b7280”,fontSize:13,fontWeight:700,cursor:“pointer”}}>
-{lbl}
-</button>
-))}
-</div>
-
-```
-  {subTab==="menu"&&(
-    <div style={{padding:"0 20px"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-        <span style={{fontSize:13,color:"#6b7280"}}>{menus.length} menu terdaftar</span>
-        <button onClick={()=>{setEditMenu(null);setView("form");}} style={btnStyle("#6366f1")}><Icon name="plus" size={16} color="#fff"/> Tambah</button>
-      </div>
-      {kategoris.map(kat=>(
-        <div key={kat} style={{marginBottom:20}}>
-          <div style={{fontSize:11,fontWeight:800,color:"#6366f1",letterSpacing:2,textTransform:"uppercase",marginBottom:8}}>{kat}</div>
-          {menus.filter(m=>m.kategori===kat).map(menu=>{
-            const hpp=calcHPP(menu,stok,biayaOps);
-            return (
-              <div key={menu.id} style={{background:"#1a1a24",borderRadius:14,padding:"14px 16px",marginBottom:10}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                  <div>
-                    <div style={{fontSize:15,fontWeight:800,color:"#e2e8f0"}}>{menu.nama}</div>
-                    <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>{menu.bahan.length} bahan · HPP {fmt(hpp.hpp_total)}</div>
-                  </div>
-                  <div style={{fontSize:15,fontWeight:800,color:"#22c55e"}}>{fmt(menu.harga_jual)}</div>
-                </div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
-                  {menu.bahan.map(b=><span key={b.bahan_id} style={{fontSize:11,background:"#0f0f18",color:"#9ca3af",padding:"3px 8px",borderRadius:20,border:"1px solid #2a2a3e"}}>{b.nama} {b.qty}{b.satuan}</span>)}
-                </div>
-                <div style={{display:"flex",gap:8}}>
-                  <button onClick={()=>setHppView(menu)} style={{...btnStyle("#0f766e"),fontSize:12,padding:"6px 12px"}}>HPP</button>
-                  <button onClick={()=>{setEditMenu(menu);setView("form");}} style={{...btnStyle("#2563eb"),fontSize:12,padding:"6px 12px"}}>Edit</button>
-                  <button onClick={()=>deleteMenu(menu.id)} style={{...btnStyle("#7f1d1d"),fontSize:12,padding:"6px 12px"}}>Hapus</button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ))}
-    </div>
-  )}
-
-  {subTab==="paket"&&(
-    <div style={{padding:"0 20px"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-        <span style={{fontSize:13,color:"#6b7280"}}>{paket.length} paket</span>
-        <button onClick={()=>setEditPaket(false)} style={btnStyle("#6366f1")}><Icon name="plus" size={16} color="#fff"/> Tambah Paket</button>
-      </div>
-      {paket.length===0?<EmptyState text="Belum ada paket. Buat paket untuk menggabungkan beberapa menu."/>:paket.map(p=>(
-        <div key={p.id} style={{background:"#1a1a24",borderRadius:14,padding:"14px 16px",marginBottom:10}}>
-          <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-            <div style={{fontSize:15,fontWeight:800,color:"#e2e8f0"}}>{p.nama}</div>
-            <div style={{fontSize:15,fontWeight:800,color:"#22c55e"}}>{fmt(p.harga_jual)}</div>
-          </div>
-          <div style={{fontSize:12,color:"#6b7280",marginBottom:8}}>Isi: {(p.items||[]).map(i=>{const m=menus.find(x=>x.id===i.menu_id);return m?`${m.nama}×${i.qty}`:""}).filter(Boolean).join(", ")}</div>
-          <div style={{display:"flex",gap:8}}>
-            <button onClick={()=>setEditPaket(p)} style={{...btnStyle("#2563eb"),fontSize:12,padding:"6px 12px"}}>Edit</button>
-            <button onClick={()=>setPaket(prev=>prev.filter(x=>x.id!==p.id))} style={{...btnStyle("#7f1d1d"),fontSize:12,padding:"6px 12px"}}>Hapus</button>
-          </div>
-        </div>
-      ))}
-    </div>
-  )}
-
-  {subTab==="biaya"&&(
-    <div style={{padding:"0 20px"}}>
-      <div style={{background:"#1a1a24",borderRadius:16,padding:"16px",marginBottom:16}}>
-        <div style={{fontSize:13,fontWeight:800,color:"#6366f1",marginBottom:4}}>⚙️ Biaya Operasional Global</div>
-        <div style={{fontSize:12,color:"#6b7280",marginBottom:14}}>Nilai ini dipakai otomatis sebagai default untuk semua menu baru. Menu yang sudah ada bisa di-override per menu.</div>
-        {Object.entries(biayaOps).map(([k,v])=>(
-          <div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-            <label style={{fontSize:14,color:"#e2e8f0",textTransform:"capitalize",fontWeight:700}}>{k==="labor"?"Labor Cost":k.charAt(0).toUpperCase()+k.slice(1)}</label>
-            <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <input type="number" value={v} onChange={e=>setBiayaOps(prev=>({...prev,[k]:Number(e.target.value)}))}
-                style={{...inputStyle,width:90,textAlign:"right",marginBottom:0}}/>
-              <span style={{fontSize:12,color:"#6b7280"}}>Rp/porsi</span>
-            </div>
-          </div>
-        ))}
-        <div style={{height:1,background:"#2a2a3e",margin:"12px 0"}}/>
-        <Row label="Total per porsi" value={fmt(Object.values(biayaOps).reduce((a,b)=>a+Number(b),0))} bold/>
-      </div>
-      <div style={{background:"#1a1a24",borderRadius:12,padding:"12px 16px"}}>
-        <div style={{fontSize:12,color:"#6b7280",lineHeight:1.6}}>
-          💡 <strong style={{color:"#9ca3af"}}>Cara kerja:</strong> Saat tambah menu baru, nilai ini otomatis terisi. Kamu bisa ubah per menu di form edit menu jika menu tertentu punya biaya berbeda.
-        </div>
-      </div>
-    </div>
-  )}
-</div>
-```
-
-);
-}
-
-// ─── PAKET FORM ───────────────────────────────────────────────────────────────
-function PaketForm({paket,menus,onSave,onBack}) {
-const [nama,setNama]=useState(paket?.nama||””);
-const [harga,setHarga]=useState(paket?.harga_jual||””);
-const [items,setItems]=useState(paket?.items||[]);
-const addItem=()=>setItems(prev=>[…prev,{menu_id:””,qty:1}]);
-const removeItem=(i)=>setItems(prev=>prev.filter((_,idx)=>idx!==i));
-const updateItem=(i,field,val)=>setItems(prev=>prev.map((x,idx)=>idx===i?{…x,[field]:val}:x));
-const handleSave=()=>{
-if(!nama||!harga||items.length===0||items.some(i=>!i.menu_id)) return alert(“Lengkapi semua field!”);
-onSave({…paket,nama,harga_jual:Number(harga),items,kategori:“Paket”});
-};
-return (
-<div style={{padding:“16px 20px”}}>
-<div style={{display:“flex”,alignItems:“center”,gap:12,marginBottom:20}}>
-<button onClick={onBack} style={{background:“none”,border:“none”,cursor:“pointer”}}><Icon name="arrow_back" size={22} color="#9ca3af"/></button>
-<div style={{fontSize:16,fontWeight:800,color:”#e2e8f0”}}>{paket?“Edit Paket”:“Buat Paket Baru”}</div>
-</div>
-<FormGroup label="Nama Paket"><input value={nama} onChange={e=>setNama(e.target.value)} placeholder=“Paket Hemat A…” style={inputStyle}/></FormGroup>
-<FormGroup label="Harga Jual Paket (Rp)"><input type=“number” value={harga} onChange={e=>setHarga(e.target.value)} placeholder=“25000” style={inputStyle}/></FormGroup>
-<div style={{marginBottom:16}}>
-<div style={{display:“flex”,justifyContent:“space-between”,alignItems:“center”,marginBottom:10}}>
-<label style={labelStyle}>Isi Paket</label>
-<button onClick={addItem} style={{…btnStyle(”#4b5563”),fontSize:11,padding:“4px 10px”}}><Icon name="plus" size={14} color="#fff"/> Menu</button>
-</div>
-{items.map((item,i)=>(
-<div key={i} style={{background:”#1a1a24”,borderRadius:12,padding:“10px 12px”,marginBottom:8,display:“flex”,gap:8,alignItems:“center”}}>
-<select value={item.menu_id} onChange={e=>updateItem(i,“menu_id”,e.target.value)} style={{…inputStyle,flex:2,marginBottom:0}}>
-<option value="">– Pilih menu –</option>
-{menus.map(m=><option key={m.id} value={m.id}>{m.nama} ({fmt(m.harga_jual)})</option>)}
-</select>
-<input type=“number” value={item.qty} onChange={e=>updateItem(i,“qty”,Number(e.target.value))} min={1} style={{…inputStyle,width:56,marginBottom:0,textAlign:“center”}}/>
-<button onClick={()=>removeItem(i)} style={{background:“none”,border:“none”,cursor:“pointer”}}><Icon name="close" size={18} color="#6b7280"/></button>
-</div>
-))}
-{items.length>0&&(
-<div style={{background:”#0f0f18”,borderRadius:8,padding:“8px 12px”,fontSize:12,color:”#6b7280”}}>
-Harga normal: {fmt(items.reduce((a,item)=>{const m=menus.find(x=>x.id===item.menu_id);return a+(m?m.harga_jual*item.qty:0);},0))}
-</div>
-)}
-</div>
-<button onClick={handleSave} style={{…btnStyle(”#6366f1”),width:“100%”,justifyContent:“center”,padding:“14px”}}>
-<Icon name="check" size={18} color="#fff"/> Simpan Paket
-</button>
-</div>
-);
-}
-
-// ─── MENU FORM ────────────────────────────────────────────────────────────────
-function MenuForm({menu,stok,biayaOps,onSave,onBack}) {
-const [nama,setNama]=useState(menu?.nama||””);
-const [kategori,setKategori]=useState(menu?.kategori||“Makanan”);
-const [harga,setHarga]=useState(menu?.harga_jual||””);
-const [bahan,setBahan]=useState(menu?.bahan||[{bahan_id:“b”+uid(),nama:””,qty:””,satuan:“gram”,isNew:true}]);
-const [biaya,setBiaya]=useState(menu?.biaya_tambahan||{…biayaOps});
-const bahanExisting=Object.entries(stok||{}).map(([id,s])=>({bahan_id:id,nama:s.nama,satuan:s.satuan}));
-const addBahan=()=>setBahan(prev=>[…prev,{bahan_id:“b”+uid(),nama:””,qty:””,satuan:“gram”,isNew:true}]);
-const removeBahan=(i)=>setBahan(prev=>prev.filter((_,idx)=>idx!==i));
-const updateBahan=(i,field,val)=>setBahan(prev=>prev.map((b,idx)=>idx===i?{…b,[field]:val}:b));
-const pilihExisting=(i,bahanId)=>{
-if(!bahanId) return;
-const found=bahanExisting.find(b=>b.bahan_id===bahanId);
-if(!found) return;
-setBahan(prev=>prev.map((b,idx)=>idx===i?{…b,bahan_id:found.bahan_id,nama:found.nama,satuan:found.satuan,isNew:false}:b));
-};
-const handleSave=()=>{
-if(!nama||bahan.some(b=>!b.nama||!b.qty)) return alert(“Lengkapi semua field!”);
-onSave({…menu,nama,kategori,harga_jual:Number(harga),bahan:bahan.map(b=>({…b,qty:Number(b.qty)})),biaya_tambahan:biaya});
-};
-return (
-<div style={{padding:“16px 20px”}}>
-<div style={{display:“flex”,alignItems:“center”,gap:12,marginBottom:20}}>
-<button onClick={onBack} style={{background:“none”,border:“none”,cursor:“pointer”}}><Icon name="arrow_back" size={22} color="#9ca3af"/></button>
-<div style={{fontSize:16,fontWeight:800,color:”#e2e8f0”}}>{menu?“Edit Menu”:“Tambah Menu Baru”}</div>
-</div>
-<FormGroup label="Nama Menu"><input value={nama} onChange={e=>setNama(e.target.value)} placeholder=“Ayam Geprek…” style={inputStyle}/></FormGroup>
-<FormGroup label="Kategori">
-<select value={kategori} onChange={e=>setKategori(e.target.value)} style={inputStyle}>
-{[“Makanan”,“Minuman”,“Snack”,“Paket”].map(k=><option key={k}>{k}</option>)}
-</select>
-</FormGroup>
-<FormGroup label="Harga Jual (Rp)"><input type=“number” value={harga} onChange={e=>setHarga(e.target.value)} placeholder=“15000” style={inputStyle}/></FormGroup>
-
-```
-  <div style={{marginBottom:16}}>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-      <label style={labelStyle}>Daftar Bahan</label>
-      <button onClick={addBahan} style={{...btnStyle("#4b5563"),fontSize:11,padding:"4px 10px"}}><Icon name="plus" size={14} color="#fff"/> Bahan</button>
-    </div>
-    {bahan.map((b,i)=>{
-      const isExisting=bahanExisting.some(e=>e.bahan_id===b.bahan_id);
-      return (
-        <div key={i} style={{background:"#1a1a24",borderRadius:12,padding:"12px",marginBottom:8,border:isExisting?"1.5px solid #1f2d1f":"1.5px solid #1f1f2e"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-            <span style={{fontSize:10,fontWeight:700,letterSpacing:0.5,textTransform:"uppercase",color:isExisting?"#6ee7b7":"#a5b4fc",background:isExisting?"#0f2a1e":"#1e1b4b",padding:"2px 8px",borderRadius:20}}>
-              {isExisting?"✓ Dari stok":"✦ Bahan baru"}
-            </span>
-            <button onClick={()=>removeBahan(i)} style={{background:"none",border:"none",cursor:"pointer",padding:4}}><Icon name="close" size={16} color="#6b7280"/></button>
-          </div>
-          {bahanExisting.length>0&&(
-            <div style={{marginBottom:8}}>
-              <div style={{fontSize:10,color:"#6b7280",fontWeight:700,textTransform:"uppercase",letterSpacing:0.5,marginBottom:4}}>Pilih dari stok</div>
-              <select value={isExisting?b.bahan_id:""} onChange={e=>pilihExisting(i,e.target.value)} style={{...inputStyle,marginBottom:0,color:isExisting?"#e2e8f0":"#6b7280"}}>
-                <option value="">-- atau tulis bahan baru --</option>
-                {bahanExisting.map(e=><option key={e.bahan_id} value={e.bahan_id}>{e.nama} ({e.satuan})</option>)}
-              </select>
-            </div>
-          )}
-          {bahanExisting.length>0&&<div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}><div style={{flex:1,height:1,background:"#2a2a3e"}}/><span style={{fontSize:10,color:"#4b5563"}}>atau tulis manual</span><div style={{flex:1,height:1,background:"#2a2a3e"}}/></div>}
-          <input value={b.nama} onChange={e=>updateBahan(i,"nama",e.target.value)} placeholder="Nama bahan baru..." style={{...inputStyle,marginBottom:8,opacity:isExisting?0.5:1}}/>
-          <div style={{display:"flex",gap:6}}>
-            <input type="number" value={b.qty} onChange={e=>updateBahan(i,"qty",e.target.value)} placeholder="Jumlah" style={{...inputStyle,flex:1,marginBottom:0}}/>
-            <select value={b.satuan} onChange={e=>updateBahan(i,"satuan",e.target.value)} style={{...inputStyle,flex:1,marginBottom:0}}>
-              {["gram","ml","kg","liter","pcs"].map(s=><option key={s}>{s}</option>)}
-            </select>
-          </div>
-        </div>
-      );
-    })}
-  </div>
-
-  <div style={{background:"#1a1a24",borderRadius:12,padding:"14px",marginBottom:20}}>
-    <div style={{fontSize:12,fontWeight:800,color:"#6b7280",marginBottom:4,letterSpacing:1,textTransform:"uppercase"}}>Biaya Tambahan (per porsi)</div>
-    <div style={{fontSize:11,color:"#4b5563",marginBottom:10}}>Default dari Biaya Ops global — ubah jika menu ini berbeda</div>
-    {Object.entries(biaya).map(([k,v])=>(
-      <div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-        <label style={{fontSize:13,color:"#9ca3af",textTransform:"capitalize"}}>{k==="labor"?"Labor Cost":k}</label>
-        <input type="number" value={v} onChange={e=>setBiaya(p=>({...p,[k]:Number(e.target.value)}))} style={{...inputStyle,width:90,textAlign:"right",marginBottom:0}}/>
-      </div>
-    ))}
-  </div>
-  <button onClick={handleSave} style={{...btnStyle("#6366f1"),width:"100%",justifyContent:"center",padding:"14px"}}>
-    <Icon name="check" size={18} color="#fff"/> Simpan Menu
-  </button>
-</div>
-```
-
-);
-}
-
-// ─── HPP VIEW ─────────────────────────────────────────────────────────────────
-function HppView({menu,stok,biayaOps,onBack}) {
-const hpp=calcHPP(menu,stok,biayaOps);
-const margins=[10,20,30];
-return (
-<div style={{padding:“16px 20px”}}>
-<div style={{display:“flex”,alignItems:“center”,gap:12,marginBottom:20}}>
-<button onClick={onBack} style={{background:“none”,border:“none”,cursor:“pointer”}}><Icon name="arrow_back" size={22} color="#9ca3af"/></button>
-<div style={{fontSize:16,fontWeight:800,color:”#e2e8f0”}}>HPP · {menu.nama}</div>
-</div>
-<SectionTitle>💰 Rincian Biaya Bahan</SectionTitle>
-{menu.bahan.map(b=>{
-const s=stok[b.bahan_id];
-const biaya=s?Math.round(b.qty*(s.satuan===“pcs”?(s.harga_beli_per_pcs||0):(s.harga_beli_per_gram||0))):0;
-return (
-<div key={b.bahan_id} style={{display:“flex”,justifyContent:“space-between”,padding:“8px 0”,borderBottom:“1px solid #1f1f2e”}}>
-<div>
-<div style={{fontSize:13,fontWeight:700,color:”#e2e8f0”}}>{b.nama}</div>
-<div style={{fontSize:11,color:”#6b7280”}}>{b.satuan===“pcs”?`${b.qty} pcs × ${fmt(s?.harga_beli_per_pcs||0)}/pcs`:`${b.qty}${b.satuan} × ${fmt((s?.harga_beli_per_gram||0)*1000)}/kg`}</div>
-</div>
-<div style={{fontSize:14,fontWeight:700,color:”#94a3b8”}}>{fmt(biaya)}</div>
-</div>
-);
-})}
-<div style={{background:”#1a1a24”,borderRadius:12,padding:“14px”,margin:“16px 0”}}>
-<Row label="Total Bahan" value={fmt(hpp.hpp_bahan)}/>
-{Object.entries(menu.biaya_tambahan||biayaOps).map(([k,v])=><Row key={k} label={`+ ${k}`} value={fmt(v)} small/>)}
-<div style={{height:1,background:”#2a2a3e”,margin:“10px 0”}}/>
-<Row label="HPP Total" value={fmt(hpp.hpp_total)} bold/>
-</div>
-<SectionTitle>📈 Rekomendasi Harga Jual</SectionTitle>
-<div style={{display:“grid”,gridTemplateColumns:“1fr 1fr 1fr”,gap:8}}>
-{margins.map(m=>(
-<div key={m} style={{background:”#1a1a24”,borderRadius:12,padding:“14px 10px”,textAlign:“center”}}>
-<div style={{fontSize:20,fontWeight:900,color:m===20?”#6366f1”:”#e2e8f0”}}>{m}%</div>
-<div style={{fontSize:11,color:”#6b7280”,marginBottom:4}}>Margin</div>
-<div style={{fontSize:14,fontWeight:800,color:”#22c55e”}}>{fmt(Math.round(hpp.hpp_total/(1-m/100)))}</div>
-</div>
-))}
-</div>
-</div>
-);
-}
-
-// ─── STOK PAGE ────────────────────────────────────────────────────────────────
-function StokPage({stok,setStok,allBahan,perlengkapan,setPerlengkapan}) {
-const [subTab,setSubTab]=useState(“bahan”);
-const [selected,setSelected]=useState(””);
-const [inputQty,setInputQty]=useState(””);
-const [inputUnit,setInputUnit]=useState(“gram”);
-const [hargaBeli,setHargaBeli]=useState(””);
-const [tanggalBeli,setTanggalBeli]=useState(new Date().toISOString().slice(0,10));
-const [editId,setEditId]=useState(null);
-const [editVal,setEditVal]=useState(””);
-const [editMax,setEditMax]=useState(””);
-// Perlengkapan form
-const [plNama,setPlNama]=useState(””);
-const [plQty,setPlQty]=useState(””);
-const [plEditId,setPlEditId]=useState(null);
-const [plEditVal,setPlEditVal]=useState(””);
-const bahan=allBahan();
-
-const selectedStok=stok[selected];
-const satuanDasar=selectedStok?.satuan||(bahan[selected]?.satuan===“pcs”?“pcs”:“gram”);
-const isPcs=satuanDasar===“pcs”;
-const unitOptions=isPcs?[“pcs”,“lusin (12)”,“kodi (20)”,“gross (144)”]:satuanDasar===“ml”?[“ml”,“liter”]:[“gram”,“kg”];
-
-const handleSelectBahan=(id)=>{
-setSelected(id);
-const s=stok[id];
-const dasar=s?.satuan||bahan[id]?.satuan||“gram”;
-setInputUnit(dasar===“pcs”?“pcs”:dasar===“ml”?“ml”:“gram”);
-setHargaBeli(s?.harga_beli_per_unit?.toString()||””);
-setInputQty(””);
-};
-
-const handleTambahStok=()=>{
-if(!selected||!inputQty||!hargaBeli) return alert(“Lengkapi semua field!”);
-const konversi=UNIT_KONVERSI[inputUnit]||1;
-const qtyDasar=Number(inputQty)*konversi;
-const hargaPerDasar=isPcs?Number(hargaBeli)/konversi:Number(hargaBeli)/(Number(inputQty)*konversi);
-const entryRiwayat={tanggal:tanggalBeli,qty:qtyDasar,satuan:satuanDasar,harga:Number(hargaBeli),unit:inputUnit};
-setStok(prev=>({…prev,[selected]:{…prev[selected],nama:bahan[selected]?.nama||selected,satuan:satuanDasar,stok_awal:(prev[selected]?.stok_awal||0)+qtyDasar,stok_saat_ini:(prev[selected]?.stok_saat_ini||0)+qtyDasar,riwayat:[…(prev[selected]?.riwayat||[]),entryRiwayat],…(isPcs?{harga_beli_per_pcs:Number(hargaBeli)/konversi,harga_beli_per_unit:Number(hargaBeli),unit_nama:inputUnit,unit_qty:konversi}:{harga_beli_per_gram:hargaPerDasar,harga_beli_per_unit:Number(hargaBeli),unit_nama:inputUnit,unit_qty:konversi})}}));
-setInputQty(””);setHargaBeli(””);setSelected(””);
-};
-
-const toDisplayVal=(s,field)=>{const qty=s[field]||0;if(s.satuan===“pcs”) return String(qty);return qty>=1000?String((qty/1000).toFixed(3)):String(qty);};
-const toBaseDasar=(s,val)=>{const num=parseFloat(val);if(s.satuan===“pcs”) return num;return(s.stok_awal>=1000||s.stok_saat_ini>=1000)?num*1000:num;};
-const handleEditStok=(id)=>{const s=stok[id];setEditVal(toDisplayVal(s,“stok_saat_ini”));setEditMax(toDisplayVal(s,“stok_awal”));setEditId(id);};
-const handleSaveEdit=(id)=>{
-const s=stok[id];
-const vT=parseFloat(editVal),vM=parseFloat(editMax);
-if(isNaN(vT)||vT<0) return alert(“Stok tersedia tidak valid!”);
-if(isNaN(vM)||vM<=0) return alert(“Stok maksimal harus > 0!”);
-if(vT>vM) return alert(“Tersedia tidak boleh melebihi maksimal!”);
-setStok(prev=>({…prev,[id]:{…prev[id],stok_saat_ini:toBaseDasar(s,editVal),stok_awal:toBaseDasar(s,editMax)}}));
-setEditId(null);setEditVal(””);setEditMax(””);
-};
-const handleCancelEdit=()=>{setEditId(null);setEditVal(””);setEditMax(””);};
-
-const displayUnit=(s)=>s.satuan===“pcs”?“pcs”:(s.stok_awal>=1000||s.stok_saat_ini>=1000)?(s.satuan===“gram”?“kg”:“L”):s.satuan;
-
-const previewHarga=()=>{
-if(!inputQty||!hargaBeli) return null;
-const k=UNIT_KONVERSI[inputUnit]||1;
-if(isPcs) return `= ${fmt(Number(hargaBeli)/k)} / pcs`;
-return `= ${fmt(Number(hargaBeli)/(Number(inputQty)*k)*1000)} / kg`;
-};
-
-const handleTambahPerlengkapan=()=>{
-if(!plNama||!plQty) return alert(“Isi nama dan jumlah!”);
-const id=“p”+uid();
-setPerlengkapan(prev=>({…prev,[id]:{nama:plNama,stok_awal:Number(plQty),stok_saat_ini:Number(plQty),satuan:“pcs”}}));
-setPlNama(””);setPlQty(””);
-};
-
-return (
-<div style={{padding:“0 0 16px”}}>
-<div style={{display:“flex”,borderBottom:“1px solid #2a2a3e”,marginBottom:16}}>
-{[[“bahan”,“Bahan”],[“perlengkapan”,“Perlengkapan”]].map(([id,lbl])=>(
-<button key={id} onClick={()=>setSubTab(id)} style={{flex:1,padding:“12px 0”,background:“none”,border:“none”,borderBottom:subTab===id?“2px solid #6366f1”:“2px solid transparent”,color:subTab===id?”#6366f1”:”#6b7280”,fontSize:13,fontWeight:700,cursor:“pointer”}}>{lbl}</button>
-))}
-</div>
-
-```
-  {subTab==="bahan"&&(
-    <div style={{padding:"0 20px"}}>
-      {/* Form tambah stok */}
-      <div style={{background:"#1a1a24",borderRadius:16,padding:"16px",marginBottom:20}}>
-        <div style={{fontSize:13,fontWeight:800,color:"#6366f1",marginBottom:12,letterSpacing:1}}>📦 TAMBAH / UPDATE STOK</div>
-        <FormGroup label="Pilih Bahan (dari Menu)">
-          <select value={selected} onChange={e=>handleSelectBahan(e.target.value)} style={inputStyle}>
-            <option value="">-- Pilih bahan --</option>
-            {Object.entries(bahan).map(([id,b])=><option key={id} value={id}>{b.nama} {b.satuan==="pcs"?"🥚 pcs":`(${b.satuan})`}</option>)}
-          </select>
-        </FormGroup>
-        {selected&&(
-          <>
-            <div style={{background:isPcs?"#1e1b4b":"#0f2a1e",borderRadius:8,padding:"8px 12px",marginBottom:10}}>
-              <span style={{fontSize:12,color:isPcs?"#a5b4fc":"#6ee7b7"}}>{isPcs?"🥚 Per pcs":"⚖️ Per "+satuanDasar}</span>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <FormGroup label="Jumlah Beli"><input type="number" value={inputQty} onChange={e=>setInputQty(e.target.value)} placeholder="0" style={{...inputStyle,marginBottom:0}}/></FormGroup>
-              <FormGroup label="Satuan">
-                <select value={inputUnit} onChange={e=>setInputUnit(e.target.value)} style={{...inputStyle,marginBottom:0}}>
-                  {unitOptions.map(s=><option key={s}>{s}</option>)}
-                </select>
-              </FormGroup>
-            </div>
-            <FormGroup label={`Harga Beli (Rp) per ${inputUnit}`}>
-              <input type="number" value={hargaBeli} onChange={e=>setHargaBeli(e.target.value)} placeholder="30000" style={inputStyle}/>
-            </FormGroup>
-            <FormGroup label="Tanggal Pembelian">
-              <input type="date" value={tanggalBeli} onChange={e=>setTanggalBeli(e.target.value)} style={inputStyle}/>
-            </FormGroup>
-            {previewHarga()&&(
-              <div style={{background:"#0f0f18",borderRadius:8,padding:"8px 12px",marginBottom:10,display:"flex",justifyContent:"space-between"}}>
-                <span style={{fontSize:12,color:"#6b7280"}}>Otomatis:</span>
-                <span style={{fontSize:13,fontWeight:800,color:"#22c55e",fontFamily:"'Space Mono'"}}>{previewHarga()}</span>
-              </div>
-            )}
-          </>
-        )}
-        <button onClick={handleTambahStok} style={{...btnStyle("#6366f1"),width:"100%",justifyContent:"center",padding:"12px",marginTop:4}}>
-          <Icon name="plus" size={16} color="#fff"/> Update Stok
-        </button>
+  return (
+    <div style={{padding:"16px 20px"}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
+        <Card bg="linear-gradient(135deg,#6366f1,#8b5cf6)">
+          <div style={{fontSize:10,color:"rgba(255,255,255,.7)",fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Penjualan Hari Ini</div>
+          <div style={{fontSize:21,fontWeight:900,color:"#fff",marginTop:4}}>{fmt(totalHarian)}</div>
+          <div style={{fontSize:11,color:"rgba(255,255,255,.6)",marginTop:2}}>{todayTx.length} transaksi</div>
+        </Card>
+        <Card bg={habis>0?"linear-gradient(135deg,#7f1d1d,#991b1b)":kritis>0?"linear-gradient(135deg,#78350f,#92400e)":"linear-gradient(135deg,#14532d,#166534)"}>
+          <div style={{fontSize:10,color:"rgba(255,255,255,.7)",fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Kapasitas Produksi</div>
+          <div style={{fontSize:21,fontWeight:900,color:"#fff",marginTop:4}}>{totalPorsi} porsi</div>
+          <div style={{fontSize:11,color:"rgba(255,255,255,.6)",marginTop:2}}>{habis>0?`⛔ ${habis} habis`:kritis>0?`⚠ ${kritis} kritis`:`✓ ${produk.length} produk ok`}</div>
+        </Card>
       </div>
 
-      <SectionTitle>📊 Daftar Stok Bahan</SectionTitle>
-      {Object.entries(stok).map(([id,s])=>{
-        const pct=getStokPersen(s);const w=getStokWarna(pct);const isEditing=editId===id;const du=displayUnit(s);
+      <ST>🍽️ Estimasi Porsi per Produk</ST>
+      {porsiData.map(pr=>{
+        const max=Math.max(...porsiData.map(x=>x.porsi),1);
+        const bp=Math.min(100,Math.round((pr.porsi/max)*100));
+        const w=pr.porsi===0?"#ef4444":pr.porsi<=5?"#f59e0b":"#22c55e";
+        const wl=pr.porsi===0?"#fee2e2":pr.porsi<=5?"#fef3c7":"#dcfce7";
+        const wt=pr.porsi===0?"#b91c1c":pr.porsi<=5?"#b45309":"#15803d";
         return (
-          <div key={id} style={{background:isEditing?"#1a1a2e":"#1a1a24",borderRadius:14,padding:"14px 16px",marginBottom:10,border:isEditing?"1.5px solid #6366f1":"1.5px solid transparent",transition:"all .2s"}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+          <div key={pr.id} style={{background:"#1a1a24",borderRadius:14,padding:"12px 16px",marginBottom:8}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
               <div>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <div style={{fontSize:14,fontWeight:800,color:"#e2e8f0"}}>{s.nama}</div>
-                  {s.satuan==="pcs"&&<span style={{fontSize:10,background:"#1e1b4b",color:"#a5b4fc",padding:"1px 6px",borderRadius:10,fontWeight:700}}>PCS</span>}
-                </div>
-                <div style={{fontSize:11,color:"#6b7280"}}>{fmtHargaPerUnit(s)} · Nilai: {fmt(nilaiStok(s))}</div>
+                <div style={{fontSize:14,fontWeight:800,color:"#e2e8f0"}}>{pr.nama}</div>
+                <div style={{fontSize:11,color:"#4b5563"}}>HPP {fmt(pr.hpp_total)} · Jual {fmt(pr.harga_jual)}</div>
               </div>
-              <div style={{textAlign:"right",display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
-                <div style={{fontFamily:"'Space Mono'",fontSize:14,color:w.bg,fontWeight:700}}>{pct}%</div>
-                <div style={{fontSize:10,background:w.light,color:w.text,padding:"1px 6px",borderRadius:10,fontWeight:800}}>{w.label}</div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontFamily:"'Space Mono'",fontSize:18,fontWeight:900,color:w,lineHeight:1}}>{pr.porsi}</div>
+                <div style={{fontSize:10,background:wl,color:wt,padding:"1px 6px",borderRadius:20,fontWeight:800}}>{pr.porsi===0?"Habis":pr.porsi<=5?"Kritis":"Tersedia"}</div>
               </div>
             </div>
-            <div style={{background:"#0f0f18",borderRadius:6,height:8,overflow:"hidden",marginBottom:8}}>
+            <div style={{background:"#0f0f18",borderRadius:6,height:6,overflow:"hidden"}}>
+              <div style={{width:`${bp}%`,height:"100%",background:w,borderRadius:6}}/>
+            </div>
+          </div>
+        );
+      })}
+
+      <ST mt={16}>📊 Status Bahan Baku</ST>
+      {bahan.map(b=>{
+        const pct=b.stok_awal>0?Math.round((b.stok_saat_ini/b.stok_awal)*100):0;
+        const w=getWarna(pct);
+        const qty=b.satuan==="pcs"?`${b.stok_saat_ini} pcs`:b.stok_saat_ini>=1000?`${(b.stok_saat_ini/1000).toFixed(2)} ${b.satuan==="gram"?"kg":"L"}`:`${b.stok_saat_ini} ${b.satuan}`;
+        return (
+          <div key={b.id} style={{background:"#1a1a24",borderRadius:12,padding:"10px 14px",marginBottom:8}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+              <span style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{b.nama}</span>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontSize:11,background:w.light,color:w.text,padding:"1px 7px",borderRadius:20,fontWeight:800}}>{w.label}</span>
+                <span style={{fontFamily:"'Space Mono'",fontSize:12,color:w.bg,fontWeight:700}}>{pct}%</span>
+              </div>
+            </div>
+            <div style={{background:"#0f0f18",borderRadius:6,height:7,overflow:"hidden"}}>
               <div style={{width:`${pct}%`,height:"100%",background:w.bg,borderRadius:6}}/>
             </div>
-            {/* Riwayat pembelian */}
-            {(s.riwayat||[]).length>0&&!isEditing&&(
-              <div style={{fontSize:10,color:"#4b5563",marginBottom:6}}>Terakhir beli: {fmtTgl((s.riwayat[s.riwayat.length-1]).tanggal)} · {fmt((s.riwayat[s.riwayat.length-1]).harga)}</div>
-            )}
-            {isEditing?(
-              <div style={{marginTop:4}}>
-                <div style={{fontSize:11,color:"#a5b4fc",fontWeight:700,marginBottom:10}}>✏️ Edit Stok</div>
-                <div style={{marginBottom:8}}>
-                  <div style={{fontSize:10,color:"#6b7280",fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:0.5}}>Stok Tersedia</div>
-                  <div style={{display:"flex",alignItems:"center",background:"#0f0f18",borderRadius:10,border:"1.5px solid #6366f1",overflow:"hidden"}}>
-                    <input type="number" value={editVal} onChange={e=>setEditVal(e.target.value)} autoFocus style={{flex:1,background:"transparent",border:"none",padding:"10px 12px",color:"#e2e8f0",fontSize:15,fontWeight:700,outline:"none",fontFamily:"'Space Mono',monospace"}}/>
-                    <span style={{padding:"0 12px",color:"#6366f1",fontSize:13,fontWeight:700}}>{du}</span>
+            <div style={{fontSize:10,color:"#4b5563",marginTop:4}}>{qty}</div>
+          </div>
+        );
+      })}
+
+      <ST mt={16}>🔥 Menu Terlaris</ST>
+      {terlaris.length===0?<Empty t="Belum ada transaksi"/>:terlaris.map(([nama,qty],i)=>(
+        <div key={nama} style={{background:"#1a1a24",borderRadius:12,padding:"10px 14px",marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
+          <div style={{width:26,height:26,background:["#f59e0b","#94a3b8","#cd7c2f"][i]||"#2a2a3e",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Space Mono'",fontSize:11,fontWeight:700,color:"#fff"}}>{i+1}</div>
+          <div style={{flex:1,fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{nama}</div>
+          <div style={{fontFamily:"'Space Mono'",fontSize:12,color:"#6366f1",fontWeight:700}}>{qty}x</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── BAHAN BAKU PAGE ──────────────────────────────────────────────────────────
+function BahanPage({bahan,setBahan,biayaOps,setBiayaOps,perlengkapan,setPerlengkapan}) {
+  const [subTab,setSubTab]=useState("bahan");
+  const [showForm,setShowForm]=useState(false);
+  const [editB,setEditB]=useState(null);
+  const [editId,setEditId]=useState(null);
+  const [editStok,setEditStok]=useState("");
+  const [editMax,setEditMax]=useState("");
+  // Tambah stok form
+  const [selId,setSelId]=useState("");
+  const [qty,setQty]=useState("");
+  const [unit,setUnit]=useState("gram");
+  const [harga,setHarga]=useState("");
+  const [tgl,setTgl]=useState(new Date().toISOString().slice(0,10));
+  // Perlengkapan
+  const [plNama,setPlNama]=useState("");
+  const [plQty,setPlQty]=useState("");
+
+  const selBahan=bahan.find(b=>b.id===selId);
+  const isPcs=selBahan?.satuan==="pcs";
+  const unitOpts=isPcs?["pcs","lusin (12)","kodi (20)","gross (144)"]:selBahan?.satuan==="ml"?["ml","liter"]:["gram","kg"];
+  const KONV={"gram":1,"kg":1000,"ml":1,"liter":1000,"pcs":1,"lusin (12)":12,"kodi (20)":20,"gross (144)":144};
+
+  const saveBahan=(b)=>{
+    if(b.id) setBahan(prev=>prev.map(x=>x.id===b.id?b:x));
+    else setBahan(prev=>[...prev,{...b,id:"bb"+uid(),stok_saat_ini:0,stok_awal:0,riwayat:[]}]);
+    setShowForm(false);setEditB(null);
+  };
+  const deleteBahan=(id)=>setBahan(prev=>prev.filter(b=>b.id!==id));
+
+  const tambahStok=()=>{
+    if(!selId||!qty||!harga) return alert("Lengkapi semua field!");
+    const k=KONV[unit]||1;
+    const qd=Number(qty)*k;
+    const hpp=isPcs?Number(harga)/k:Number(harga)/(Number(qty)*k);
+    setBahan(prev=>prev.map(b=>b.id!==selId?b:{
+      ...b,
+      stok_awal:b.stok_awal+qd,
+      stok_saat_ini:b.stok_saat_ini+qd,
+      harga_per_satuan:hpp,
+      riwayat:[...(b.riwayat||[]),{tanggal:tgl,qty:qd,harga:Number(harga),unit}]
+    }));
+    setQty("");setHarga("");setSelId("");
+  };
+
+  const startEdit=(id)=>{
+    const b=bahan.find(x=>x.id===id);
+    const v=b.satuan==="pcs"?String(b.stok_saat_ini):b.stok_saat_ini>=1000?String((b.stok_saat_ini/1000).toFixed(3)):String(b.stok_saat_ini);
+    const m=b.satuan==="pcs"?String(b.stok_awal):b.stok_awal>=1000?String((b.stok_awal/1000).toFixed(3)):String(b.stok_awal);
+    setEditStok(v);setEditMax(m);setEditId(id);
+  };
+  const saveEdit=(id)=>{
+    const b=bahan.find(x=>x.id===id);
+    const vt=parseFloat(editStok),vm=parseFloat(editMax);
+    if(isNaN(vt)||vt<0||isNaN(vm)||vm<=0) return alert("Nilai tidak valid!");
+    if(vt>vm) return alert("Tersedia > Maksimal!");
+    const toBase=(v)=>b.satuan==="pcs"?v:b.stok_awal>=1000||b.stok_saat_ini>=1000?v*1000:v;
+    setBahan(prev=>prev.map(x=>x.id!==id?x:{...x,stok_saat_ini:toBase(vt),stok_awal:toBase(vm)}));
+    setEditId(null);
+  };
+
+  if(showForm) return <BahanForm bahan={editB} onSave={saveBahan} onBack={()=>{setShowForm(false);setEditB(null);}}/>;
+
+  return (
+    <div style={{padding:"0 0 16px"}}>
+      <div style={{display:"flex",borderBottom:"1px solid #2a2a3e"}}>
+        {[["bahan","Bahan Baku"],["stok","Update Stok"],["perlengkapan","Perlengkapan"],["ops","Biaya Ops"]].map(([id,lbl])=>(
+          <button key={id} onClick={()=>setSubTab(id)} style={{flex:1,padding:"11px 0",background:"none",border:"none",borderBottom:subTab===id?"2px solid #6366f1":"2px solid transparent",color:subTab===id?"#6366f1":"#6b7280",fontSize:11,fontWeight:700,cursor:"pointer"}}>{lbl}</button>
+        ))}
+      </div>
+
+      {subTab==="bahan"&&(
+        <div style={{padding:"16px 20px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+            <span style={{fontSize:13,color:"#6b7280"}}>{bahan.length} bahan terdaftar</span>
+            <button onClick={()=>{setEditB(null);setShowForm(true);}} style={BS("#6366f1")}><Icon name="plus" size={15} color="#fff"/> Tambah</button>
+          </div>
+          {bahan.map(b=>{
+            const pct=b.stok_awal>0?Math.round((b.stok_saat_ini/b.stok_awal)*100):0;
+            const w=getWarna(pct);
+            const isE=editId===b.id;
+            const du=b.satuan==="pcs"?"pcs":(b.stok_awal>=1000||b.stok_saat_ini>=1000)?(b.satuan==="gram"?"kg":"L"):b.satuan;
+            return (
+              <div key={b.id} style={{background:isE?"#1a1a2e":"#1a1a24",borderRadius:14,padding:"13px 15px",marginBottom:10,border:isE?"1.5px solid #6366f1":"1.5px solid transparent"}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:800,color:"#e2e8f0"}}>{b.nama}</div>
+                    <div style={{fontSize:11,color:"#6b7280"}}>{b.satuan==="pcs"?`${fmt(b.harga_per_satuan)}/pcs`:`${fmt(b.harga_per_satuan*1000)}/kg`}</div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontFamily:"'Space Mono'",fontSize:13,color:w.bg,fontWeight:700}}>{pct}%</div>
+                    <div style={{fontSize:10,background:w.light,color:w.text,padding:"1px 6px",borderRadius:10,fontWeight:800}}>{w.label}</div>
                   </div>
                 </div>
-                <div style={{marginBottom:10}}>
-                  <div style={{fontSize:10,color:"#6b7280",fontWeight:700,marginBottom:4,textTransform:"uppercase",letterSpacing:0.5}}>Stok Maksimal <span style={{color:"#4b5563",fontWeight:400,textTransform:"none"}}>(acuan 100%)</span></div>
-                  <div style={{display:"flex",alignItems:"center",background:"#0f0f18",borderRadius:10,border:"1.5px solid #374151",overflow:"hidden"}}>
-                    <input type="number" value={editMax} onChange={e=>setEditMax(e.target.value)} style={{flex:1,background:"transparent",border:"none",padding:"10px 12px",color:"#e2e8f0",fontSize:15,fontWeight:700,outline:"none",fontFamily:"'Space Mono',monospace"}}/>
-                    <span style={{padding:"0 12px",color:"#9ca3af",fontSize:13,fontWeight:700}}>{du}</span>
-                  </div>
-                  {editVal&&editMax&&parseFloat(editVal)>parseFloat(editMax)&&<div style={{fontSize:10,color:"#ef4444",marginTop:4}}>⚠ Tersedia tidak boleh melebihi maksimal</div>}
+                <div style={{background:"#0f0f18",borderRadius:6,height:7,overflow:"hidden",marginBottom:7}}>
+                  <div style={{width:`${pct}%`,height:"100%",background:w.bg,borderRadius:6}}/>
                 </div>
-                {editVal&&editMax&&parseFloat(editMax)>0&&parseFloat(editVal)<=parseFloat(editMax)&&(
-                  <div style={{background:"#0f0f18",borderRadius:8,padding:"7px 12px",marginBottom:10,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                    <span style={{fontSize:11,color:"#6b7280"}}>Preview:</span>
-                    <span style={{fontSize:13,fontWeight:800,color:"#22c55e",fontFamily:"'Space Mono'"}}>{Math.round((parseFloat(editVal)/parseFloat(editMax))*100)}%</span>
+                {isE?(
+                  <div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                      <div>
+                        <div style={{fontSize:10,color:"#6b7280",fontWeight:700,marginBottom:3,textTransform:"uppercase"}}>Tersedia</div>
+                        <div style={{display:"flex",alignItems:"center",background:"#0f0f18",borderRadius:8,border:"1.5px solid #6366f1",overflow:"hidden"}}>
+                          <input type="number" value={editStok} onChange={e=>setEditStok(e.target.value)} autoFocus style={{flex:1,background:"transparent",border:"none",padding:"8px 10px",color:"#e2e8f0",fontSize:14,fontWeight:700,outline:"none",fontFamily:"'Space Mono'"}}/>
+                          <span style={{padding:"0 8px",color:"#6366f1",fontSize:12,fontWeight:700}}>{du}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{fontSize:10,color:"#6b7280",fontWeight:700,marginBottom:3,textTransform:"uppercase"}}>Maksimal</div>
+                        <div style={{display:"flex",alignItems:"center",background:"#0f0f18",borderRadius:8,border:"1.5px solid #374151",overflow:"hidden"}}>
+                          <input type="number" value={editMax} onChange={e=>setEditMax(e.target.value)} style={{flex:1,background:"transparent",border:"none",padding:"8px 10px",color:"#e2e8f0",fontSize:14,fontWeight:700,outline:"none",fontFamily:"'Space Mono'"}}/>
+                          <span style={{padding:"0 8px",color:"#9ca3af",fontSize:12,fontWeight:700}}>{du}</span>
+                        </div>
+                      </div>
+                    </div>
+                    {editStok&&editMax&&parseFloat(editMax)>0&&parseFloat(editStok)<=parseFloat(editMax)&&(
+                      <div style={{background:"#0f0f18",borderRadius:7,padding:"5px 10px",marginBottom:8,display:"flex",justifyContent:"space-between"}}>
+                        <span style={{fontSize:11,color:"#6b7280"}}>Preview:</span>
+                        <span style={{fontSize:12,fontWeight:800,color:"#22c55e",fontFamily:"'Space Mono'"}}>{Math.round((parseFloat(editStok)/parseFloat(editMax))*100)}%</span>
+                      </div>
+                    )}
+                    <div style={{display:"flex",gap:8}}>
+                      <button onClick={()=>saveEdit(b.id)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,background:"#22c55e",border:"none",borderRadius:9,padding:"9px",cursor:"pointer",fontSize:13,fontWeight:700,color:"#fff"}}><Icon name="check" size={15} color="#fff"/> Simpan</button>
+                      <button onClick={()=>setEditId(null)} style={{background:"#2a2a3e",border:"none",borderRadius:9,padding:"9px 13px",cursor:"pointer",display:"flex",alignItems:"center"}}><Icon name="close" size={15} color="#9ca3af"/></button>
+                    </div>
+                  </div>
+                ):(
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <span style={{fontSize:12,color:"#9ca3af",fontFamily:"'Space Mono'"}}>
+                      {b.satuan==="pcs"?`${b.stok_saat_ini} pcs`:b.stok_saat_ini>=1000?`${(b.stok_saat_ini/1000).toFixed(2)} ${b.satuan==="gram"?"kg":"L"}`:`${b.stok_saat_ini} ${b.satuan}`}
+                    </span>
+                    <div style={{display:"flex",gap:6}}>
+                      <button onClick={()=>startEdit(b.id)} style={{display:"flex",alignItems:"center",gap:4,background:"#1f1f2e",border:"1px solid #2a2a3e",borderRadius:7,padding:"4px 9px",cursor:"pointer",fontSize:11,fontWeight:700,color:"#9ca3af"}}><Icon name="edit" size={12} color="#6366f1"/> Edit</button>
+                      <button onClick={()=>{setEditB(b);setShowForm(true);}} style={{display:"flex",alignItems:"center",gap:4,background:"#1f1f2e",border:"1px solid #2a2a3e",borderRadius:7,padding:"4px 9px",cursor:"pointer",fontSize:11,fontWeight:700,color:"#9ca3af"}}><Icon name="settings" size={12} color="#9ca3af"/> Info</button>
+                      <button onClick={()=>deleteBahan(b.id)} style={{background:"none",border:"none",cursor:"pointer",padding:4}}><Icon name="trash" size={15} color="#4b5563"/></button>
+                    </div>
                   </div>
                 )}
-                <div style={{display:"flex",gap:8}}>
-                  <button onClick={()=>handleSaveEdit(id)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"#22c55e",border:"none",borderRadius:10,padding:"11px",cursor:"pointer",fontSize:13,fontWeight:700,color:"#fff"}}>
-                    <Icon name="check" size={16} color="#fff"/> Simpan
-                  </button>
-                  <button onClick={handleCancelEdit} style={{background:"#2a2a3e",border:"none",borderRadius:10,padding:"11px 16px",cursor:"pointer",display:"flex",alignItems:"center"}}>
-                    <Icon name="close" size={16} color="#9ca3af"/>
-                  </button>
-                </div>
               </div>
-            ):(
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div>
-                  <span style={{fontSize:13,color:"#9ca3af",fontFamily:"'Space Mono'",fontWeight:700}}>{fmtStokQty(s)}</span>
-                  <span style={{fontSize:11,color:"#4b5563"}}> / {fmtStokQty(s,"stok_awal")}</span>
-                </div>
-                <button onClick={()=>handleEditStok(id)} style={{display:"flex",alignItems:"center",gap:5,background:"#1f1f2e",border:"1px solid #2a2a3e",borderRadius:8,padding:"5px 10px",cursor:"pointer",color:"#9ca3af",fontSize:11,fontWeight:700}}>
-                  <Icon name="edit" size={13} color="#6366f1"/> Edit Stok
-                </button>
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  )}
-
-  {subTab==="perlengkapan"&&(
-    <div style={{padding:"0 20px"}}>
-      <div style={{background:"#1a1a24",borderRadius:16,padding:"16px",marginBottom:20}}>
-        <div style={{fontSize:13,fontWeight:800,color:"#6366f1",marginBottom:12}}>📦 TAMBAH PERLENGKAPAN</div>
-        <FormGroup label="Nama Perlengkapan">
-          <input value={plNama} onChange={e=>setPlNama(e.target.value)} placeholder="Sendok plastik, box, dll..." style={inputStyle}/>
-        </FormGroup>
-        <FormGroup label="Jumlah Stok Awal (pcs)">
-          <input type="number" value={plQty} onChange={e=>setPlQty(e.target.value)} placeholder="100" style={inputStyle}/>
-        </FormGroup>
-        <button onClick={handleTambahPerlengkapan} style={{...btnStyle("#6366f1"),width:"100%",justifyContent:"center",padding:"12px"}}>
-          <Icon name="plus" size={16} color="#fff"/> Tambah
-        </button>
-      </div>
-      <SectionTitle>📋 Daftar Perlengkapan</SectionTitle>
-      {Object.entries(perlengkapan).length===0?<EmptyState text="Belum ada perlengkapan"/>:Object.entries(perlengkapan).map(([id,p])=>{
-        const pct=p.stok_awal>0?Math.round((p.stok_saat_ini/p.stok_awal)*100):0;
-        const w=getStokWarna(pct);
-        const isEditing=plEditId===id;
-        return (
-          <div key={id} style={{background:"#1a1a24",borderRadius:14,padding:"14px 16px",marginBottom:10}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-              <div style={{fontSize:14,fontWeight:800,color:"#e2e8f0"}}>{p.nama}</div>
-              <div style={{fontFamily:"'Space Mono'",fontSize:14,color:w.bg,fontWeight:700}}>{pct}%</div>
-            </div>
-            <div style={{background:"#0f0f18",borderRadius:6,height:8,overflow:"hidden",marginBottom:8}}>
-              <div style={{width:`${pct}%`,height:"100%",background:w.bg,borderRadius:6}}/>
-            </div>
-            {isEditing?(
-              <div style={{display:"flex",gap:8}}>
-                <input type="number" value={plEditVal} onChange={e=>setPlEditVal(e.target.value)} autoFocus style={{...inputStyle,flex:1,marginBottom:0,fontFamily:"'Space Mono'",fontWeight:700}}/>
-                <button onClick={()=>{setPerlengkapan(prev=>({...prev,[id]:{...prev[id],stok_saat_ini:Number(plEditVal)}}));setPlEditId(null);}} style={{background:"#22c55e",border:"none",borderRadius:10,padding:"10px 14px",cursor:"pointer",display:"flex",alignItems:"center"}}><Icon name="check" size={16} color="#fff"/></button>
-                <button onClick={()=>setPlEditId(null)} style={{background:"#2a2a3e",border:"none",borderRadius:10,padding:"10px 14px",cursor:"pointer",display:"flex",alignItems:"center"}}><Icon name="close" size={16} color="#9ca3af"/></button>
-              </div>
-            ):(
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <span style={{fontSize:13,color:"#9ca3af",fontFamily:"'Space Mono'"}}>{p.stok_saat_ini} / {p.stok_awal} pcs</span>
-                <div style={{display:"flex",gap:6}}>
-                  <button onClick={()=>{setPlEditId(id);setPlEditVal(String(p.stok_saat_ini));}} style={{display:"flex",alignItems:"center",gap:5,background:"#1f1f2e",border:"1px solid #2a2a3e",borderRadius:8,padding:"5px 10px",cursor:"pointer",fontSize:11,fontWeight:700,color:"#9ca3af"}}><Icon name="edit" size={13} color="#6366f1"/> Edit</button>
-                  <button onClick={()=>setPerlengkapan(prev=>{const n={...prev};delete n[id];return n;})} style={{background:"none",border:"none",cursor:"pointer",padding:4}}><Icon name="trash" size={16} color="#4b5563"/></button>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  )}
-</div>
-```
-
-);
-}
-
-// ─── KASIR PAGE ───────────────────────────────────────────────────────────────
-function KasirPage({menus,paket,addTransaksi,stok,perlengkapan}) {
-const [cart,setCart]=useState([]);
-const [bayar,setBayar]=useState(””);
-const [tipe,setTipe]=useState(“dine-in”);
-const [selectedPerlengkapan,setSelectedPerlengkapan]=useState([]);
-const [lastTx,setLastTx]=useState(null);
-const [showStruk,setShowStruk]=useState(false);
-const [kasirTab,setKasirTab]=useState(“menu”);
-
-const total=cart.reduce((a,i)=>a+i.harga*i.qty,0);
-const kembalian=Number(bayar)-total;
-
-const addToCart=(item,harga,id,jenis)=>{
-setCart(prev=>{
-const found=prev.find(i=>i.menu_id===id);
-if(found) return prev.map(i=>i.menu_id===id?{…i,qty:i.qty+1}:i);
-return […prev,{menu_id:id,nama:item,harga,qty:1,jenis:jenis||“menu”}];
-});
-};
-const changeQty=(menu_id,delta)=>setCart(prev=>prev.map(i=>i.menu_id===menu_id?{…i,qty:Math.max(0,i.qty+delta)}:i).filter(i=>i.qty>0));
-const togglePerlengkapan=(id)=>setSelectedPerlengkapan(prev=>prev.includes(id)?prev.filter(x=>x!==id):[…prev,id]);
-
-const handleBayar=()=>{
-if(cart.length===0) return alert(“Keranjang kosong!”);
-if(Number(bayar)<total) return alert(“Bayar kurang!”);
-const tx={id:“t”+uid(),waktu:new Date().toISOString(),items:cart.map(i=>({…i,perlengkapan_ids:tipe===“takeaway”?selectedPerlengkapan:[]})),total,bayar:Number(bayar),kembalian,tipe};
-addTransaksi(tx);
-setLastTx(tx);
-setShowStruk(true);
-setCart([]);setBayar(””);setSelectedPerlengkapan([]);
-};
-
-if(showStruk&&lastTx) return <StrukPage tx={lastTx} menus={menus} paket={paket} onClose={()=>setShowStruk(false)}/>;
-
-const kategoris=[…new Set(menus.map(m=>m.kategori))];
-
-return (
-<div style={{padding:“0”}}>
-{/* Tipe order */}
-<div style={{display:“flex”,gap:8,padding:“12px 20px 0”,marginBottom:8}}>
-{[[“dine-in”,“Dine In”],[“takeaway”,“Take Away”]].map(([v,l])=>(
-<button key={v} onClick={()=>setTipe(v)} style={{flex:1,padding:“8px”,borderRadius:10,border:“1.5px solid”,borderColor:tipe===v?”#6366f1”:”#2a2a3e”,background:tipe===v?”#1e1b4b”:”#1a1a24”,color:tipe===v?”#a5b4fc”:”#6b7280”,fontSize:13,fontWeight:700,cursor:“pointer”}}>{l}</button>
-))}
-</div>
-
-```
-  {/* Menu/Paket tabs */}
-  <div style={{display:"flex",borderBottom:"1px solid #2a2a3e",margin:"0 0 0"}}>
-    {[["menu","Menu"],["paket","Paket"]].map(([id,lbl])=>(
-      <button key={id} onClick={()=>setKasirTab(id)} style={{flex:1,padding:"10px 0",background:"none",border:"none",borderBottom:kasirTab===id?"2px solid #6366f1":"2px solid transparent",color:kasirTab===id?"#6366f1":"#6b7280",fontSize:13,fontWeight:700,cursor:"pointer"}}>{lbl}</button>
-    ))}
-  </div>
-
-  <div style={{padding:"12px 20px 8px"}}>
-    {kasirTab==="menu"&&kategoris.map(kat=>(
-      <div key={kat} style={{marginBottom:16}}>
-        <div style={{fontSize:11,fontWeight:800,color:"#6366f1",letterSpacing:2,textTransform:"uppercase",marginBottom:8}}>{kat}</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-          {menus.filter(m=>m.kategori===kat).map(menu=>{
-            const inCart=cart.find(i=>i.menu_id===menu.id);
-            return (
-              <button key={menu.id} onClick={()=>addToCart(menu.nama,menu.harga_jual,menu.id,"menu")} style={{background:inCart?"#1e1b4b":"#1a1a24",border:inCart?"1.5px solid #6366f1":"1.5px solid transparent",borderRadius:14,padding:"14px 12px",textAlign:"left",cursor:"pointer",position:"relative",transition:"all .15s"}}>
-                {inCart&&<div style={{position:"absolute",top:8,right:8,background:"#6366f1",color:"#fff",fontSize:11,fontWeight:800,borderRadius:20,padding:"1px 7px"}}>{inCart.qty}×</div>}
-                <div style={{fontSize:13,fontWeight:800,color:"#e2e8f0",marginBottom:4,lineHeight:1.2}}>{menu.nama}</div>
-                <div style={{fontSize:14,fontWeight:900,color:"#22c55e"}}>{fmt(menu.harga_jual)}</div>
-              </button>
             );
           })}
         </div>
-      </div>
-    ))}
-    {kasirTab==="paket"&&(
-      paket.length===0?<EmptyState text="Belum ada paket dibuat"/>:
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-        {paket.map(p=>{
-          const inCart=cart.find(i=>i.menu_id===p.id);
-          return (
-            <button key={p.id} onClick={()=>addToCart(p.nama,p.harga_jual,p.id,"paket")} style={{background:inCart?"#1e1b4b":"#1a1a24",border:inCart?"1.5px solid #6366f1":"1.5px solid transparent",borderRadius:14,padding:"14px 12px",textAlign:"left",cursor:"pointer",position:"relative"}}>
-              {inCart&&<div style={{position:"absolute",top:8,right:8,background:"#6366f1",color:"#fff",fontSize:11,fontWeight:800,borderRadius:20,padding:"1px 7px"}}>{inCart.qty}×</div>}
-              <div style={{fontSize:11,background:"#6366f1",color:"#fff",padding:"1px 6px",borderRadius:8,fontWeight:700,marginBottom:4,display:"inline-block"}}>PAKET</div>
-              <div style={{fontSize:13,fontWeight:800,color:"#e2e8f0",marginBottom:4,lineHeight:1.2}}>{p.nama}</div>
-              <div style={{fontSize:14,fontWeight:900,color:"#22c55e"}}>{fmt(p.harga_jual)}</div>
-            </button>
-          );
-        })}
-      </div>
-    )}
-  </div>
+      )}
 
-  {/* Take away perlengkapan */}
-  {tipe==="takeaway"&&Object.keys(perlengkapan).length>0&&(
-    <div style={{padding:"8px 20px",background:"#111118",borderTop:"1px solid #1f1f2e",borderBottom:"1px solid #1f1f2e"}}>
-      <div style={{fontSize:11,fontWeight:800,color:"#f59e0b",marginBottom:8,letterSpacing:1,textTransform:"uppercase"}}>🥡 Pilih Perlengkapan (Take Away)</div>
-      <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-        {Object.entries(perlengkapan).map(([id,p])=>{
-          const sel=selectedPerlengkapan.includes(id);
-          return (
-            <button key={id} onClick={()=>togglePerlengkapan(id)} style={{padding:"5px 12px",borderRadius:20,border:"1.5px solid",borderColor:sel?"#f59e0b":"#2a2a3e",background:sel?"#1a1400":"#1a1a24",color:sel?"#fbbf24":"#6b7280",fontSize:12,fontWeight:700,cursor:"pointer"}}>
-              {sel?"✓ ":""}{p.nama} ({p.stok_saat_ini})
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  )}
-
-  {/* Cart */}
-  {cart.length>0&&(
-    <div style={{background:"#1a1a24",borderTop:"1px solid #2a2a3e",padding:"16px 20px"}}>
-      <div style={{fontSize:12,fontWeight:800,color:"#6b7280",marginBottom:10,letterSpacing:1,textTransform:"uppercase"}}>🛒 Pesanan</div>
-      {cart.map(item=>(
-        <div key={item.menu_id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-          <div style={{flex:1}}>
-            <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{item.nama}</div>
-            <div style={{fontSize:12,color:"#9ca3af"}}>{fmt(item.harga)} × {item.qty}</div>
+      {subTab==="stok"&&(
+        <div style={{padding:"16px 20px"}}>
+          <div style={{background:"#1a1a24",borderRadius:16,padding:"16px",marginBottom:16}}>
+            <div style={{fontSize:13,fontWeight:800,color:"#6366f1",marginBottom:12}}>📦 Tambah / Restock Bahan</div>
+            <FG label="Pilih Bahan">
+              <select value={selId} onChange={e=>{setSelId(e.target.value);const b=bahan.find(x=>x.id===e.target.value);if(b){setUnit(b.satuan==="pcs"?"pcs":b.satuan==="ml"?"ml":"gram");setHarga("");}}} style={IS}>
+                <option value="">-- Pilih bahan --</option>
+                {bahan.map(b=><option key={b.id} value={b.id}>{b.nama} ({b.satuan})</option>)}
+              </select>
+            </FG>
+            {selId&&(
+              <>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <FG label="Jumlah Beli"><input type="number" value={qty} onChange={e=>setQty(e.target.value)} placeholder="0" style={{...IS,marginBottom:0}}/></FG>
+                  <FG label="Satuan">
+                    <select value={unit} onChange={e=>setUnit(e.target.value)} style={{...IS,marginBottom:0}}>
+                      {unitOpts.map(u=><option key={u}>{u}</option>)}
+                    </select>
+                  </FG>
+                </div>
+                <FG label={`Harga Beli Total (per ${unit})`}><input type="number" value={harga} onChange={e=>setHarga(e.target.value)} placeholder="30000" style={IS}/></FG>
+                <FG label="Tanggal Pembelian"><input type="date" value={tgl} onChange={e=>setTgl(e.target.value)} style={IS}/></FG>
+                {qty&&harga&&(
+                  <div style={{background:"#0f0f18",borderRadius:8,padding:"8px 12px",marginBottom:10,display:"flex",justifyContent:"space-between"}}>
+                    <span style={{fontSize:12,color:"#6b7280"}}>HPP per satuan:</span>
+                    <span style={{fontSize:13,fontWeight:800,color:"#22c55e",fontFamily:"'Space Mono'"}}>
+                      {isPcs?`${fmt(Number(harga)/(KONV[unit]||1))}/pcs`:`${fmt(Number(harga)/(Number(qty)*(KONV[unit]||1))*1000)}/kg`}
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
+            <button onClick={tambahStok} style={{...BS("#6366f1"),width:"100%",justifyContent:"center",padding:"11px",marginTop:4}}><Icon name="plus" size={15} color="#fff"/> Tambah Stok</button>
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <div style={{fontSize:13,fontWeight:800,color:"#22c55e",marginRight:8}}>{fmt(item.harga*item.qty)}</div>
-            <button onClick={()=>changeQty(item.menu_id,-1)} style={{width:26,height:26,borderRadius:8,background:"#2a2a3e",border:"none",cursor:"pointer",color:"#e2e8f0",fontSize:16,fontWeight:700}}>−</button>
-            <span style={{fontSize:14,fontWeight:800,color:"#e2e8f0",minWidth:20,textAlign:"center"}}>{item.qty}</span>
-            <button onClick={()=>changeQty(item.menu_id,1)} style={{width:26,height:26,borderRadius:8,background:"#6366f1",border:"none",cursor:"pointer",color:"#fff",fontSize:16,fontWeight:700}}>+</button>
-          </div>
-        </div>
-      ))}
-      <div style={{height:1,background:"#2a2a3e",margin:"12px 0"}}/>
-      <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}>
-        <span style={{fontSize:15,fontWeight:800,color:"#e2e8f0"}}>Total</span>
-        <span style={{fontSize:18,fontWeight:900,color:"#22c55e",fontFamily:"'Space Mono'"}}>{fmt(total)}</span>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
-        <FormGroup label="Bayar (Rp)">
-          <input type="number" value={bayar} onChange={e=>setBayar(e.target.value)} placeholder={total.toString()} style={{...inputStyle,marginBottom:0}}/>
-        </FormGroup>
-        <FormGroup label="Kembalian">
-          <div style={{background:"#0f0f18",borderRadius:10,padding:"11px 14px",fontSize:14,fontWeight:800,color:kembalian>=0&&bayar?"#22c55e":"#ef4444",border:"1.5px solid #1f1f2e"}}>
-            {bayar?fmt(Math.max(0,kembalian)):"–"}
-          </div>
-        </FormGroup>
-      </div>
-      <button onClick={handleBayar} style={{...btnStyle("#22c55e"),width:"100%",justifyContent:"center",padding:"14px",fontSize:15}}>
-        <Icon name="check" size={20} color="#fff"/> Proses Pembayaran
-      </button>
-    </div>
-  )}
-</div>
-```
-
-);
-}
-
-// ─── STRUK PAGE ───────────────────────────────────────────────────────────────
-function StrukPage({tx,menus,paket,onClose}) {
-const namaRestoran=“RestoKu”;
-const struktRef=React.useRef?React.useRef(null):null;
-
-const printStruk=async()=>{
-// Web Bluetooth Print — mencoba connect ke printer thermal BT
-if(!navigator.bluetooth){alert(“Browser ini tidak mendukung Bluetooth. Gunakan Chrome di Android/desktop.”);return;}
-try{
-const device=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[“000018f0-0000-1000-8000-00805f9b34fb”]});
-const server=await device.gatt.connect();
-const service=await server.getPrimaryService(“000018f0-0000-1000-8000-00805f9b34fb”);
-const char=await service.getCharacteristic(“00002af1-0000-1000-8000-00805f9b34fb”);
-const enc=new TextEncoder();
-const lines=[
-“\x1B\x40”,”\x1B\x61\x01”,
-`${namaRestoran}\n`,”\x1B\x61\x00”,
-“================================\n”,
-`${fmtTgl(tx.waktu)} ${fmtJam(tx.waktu)}\n`,
-`Order: ${tx.tipe==="takeaway"?"Take Away":"Dine In"}\n`,
-“––––––––––––––––\n”,
-…tx.items.map(i=>`${i.nama}\n  ${i.qty} x ${fmt(i.harga).replace("Rp\xa0","Rp ")} = ${fmt(i.harga*i.qty).replace("Rp\xa0","Rp ")}\n`),
-“================================\n”,
-`TOTAL : ${fmt(tx.total).replace("Rp\xa0","Rp ")}\n`,
-`BAYAR : ${fmt(tx.bayar).replace("Rp\xa0","Rp ")}\n`,
-`KEMBALIAN: ${fmt(tx.kembalian).replace("Rp\xa0","Rp ")}\n`,
-“================================\n”,
-“   Terima kasih!\n\n\n”,”\x1D\x56\x00”
-];
-for(const line of lines){await char.writeValue(enc.encode(line));}
-alert(“Struk berhasil dikirim ke printer!”);
-}catch(e){
-if(e.name===“NotFoundError”) alert(“Printer tidak dipilih.”);
-else alert(“Gagal print: “+e.message+”\n\nPastikan printer thermal BT menyala dan dalam jangkauan.”);
-}
-};
-
-return (
-<div style={{padding:“0 20px 24px”}}>
-<div style={{display:“flex”,alignItems:“center”,gap:12,padding:“16px 0”,borderBottom:“1px solid #2a2a3e”,marginBottom:16}}>
-<button onClick={onClose} style={{background:“none”,border:“none”,cursor:“pointer”}}><Icon name="arrow_back" size={22} color="#9ca3af"/></button>
-<div style={{fontSize:16,fontWeight:800,color:”#e2e8f0”}}>Struk Transaksi</div>
-</div>
-
-```
-  {/* Struk visual */}
-  <div ref={struktRef} style={{background:"#fff",borderRadius:16,padding:"20px",color:"#111",fontFamily:"'Space Mono',monospace",fontSize:13,marginBottom:16}}>
-    <div style={{textAlign:"center",fontWeight:700,fontSize:16,marginBottom:2}}>{namaRestoran}</div>
-    <div style={{textAlign:"center",fontSize:11,color:"#555",marginBottom:12}}>{fmtTgl(tx.waktu)} · {fmtJam(tx.waktu)} · {tx.tipe==="takeaway"?"Take Away":"Dine In"}</div>
-    <div style={{borderTop:"1px dashed #ccc",borderBottom:"1px dashed #ccc",padding:"8px 0",margin:"0 0 8px"}}>
-      {tx.items.map((item,i)=>(
-        <div key={i} style={{marginBottom:6}}>
-          <div style={{fontSize:12,fontWeight:700}}>{item.nama}</div>
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#555"}}>
-            <span>{item.qty} × {fmt(item.harga)}</span>
-            <span style={{fontWeight:700,color:"#111"}}>{fmt(item.harga*item.qty)}</span>
-          </div>
-        </div>
-      ))}
-    </div>
-    <div style={{display:"flex",justifyContent:"space-between",fontWeight:700,fontSize:14,margin:"8px 0 4px"}}><span>Total</span><span>{fmt(tx.total)}</span></div>
-    <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#555"}}><span>Bayar</span><span>{fmt(tx.bayar)}</span></div>
-    <div style={{display:"flex",justifyContent:"space-between",fontWeight:700,fontSize:13,color:"#15803d"}}><span>Kembalian</span><span>{fmt(tx.kembalian)}</span></div>
-    <div style={{textAlign:"center",fontSize:11,color:"#888",marginTop:12}}>— Terima kasih! —</div>
-  </div>
-
-  <div style={{display:"flex",flexDirection:"column",gap:10}}>
-    <button onClick={printStruk} style={{...btnStyle("#6366f1"),width:"100%",justifyContent:"center",padding:"14px",fontSize:14}}>
-      <Icon name="print" size={18} color="#fff"/> Print ke Printer Thermal BT
-    </button>
-    <div style={{background:"#1a1a24",borderRadius:12,padding:"12px 14px"}}>
-      <div style={{fontSize:12,color:"#6b7280",lineHeight:1.7}}>
-        💡 <strong style={{color:"#9ca3af"}}>Cara connect printer:</strong> Pastikan printer Bluetooth menyala → klik tombol Print → pilih printer dari daftar → struk terkirim otomatis.<br/><br/>
-        Printer yang didukung: ESC/POS thermal printers (Epson, GOOJPRT, XPrinter, dll) via Web Bluetooth API. Gunakan <strong style={{color:"#9ca3af"}}>Chrome</strong> di Android atau desktop untuk fitur ini.
-      </div>
-    </div>
-    <button onClick={onClose} style={{...btnStyle("#2a2a3e"),width:"100%",justifyContent:"center",padding:"12px",fontSize:13}}>
-      Kembali ke Kasir
-    </button>
-  </div>
-</div>
-```
-
-);
-}
-
-// ─── LAPORAN PAGE ─────────────────────────────────────────────────────────────
-function LaporanPage({transaksi,menus,paket}) {
-const [periode,setPeriode]=useState(“harian”);
-const [tglFilter,setTglFilter]=useState(new Date().toISOString().slice(0,10));
-const [bulanFilter,setBulanFilter]=useState(new Date().toISOString().slice(0,7));
-
-const filterTx=(txList)=>{
-if(periode===“harian”) return txList.filter(t=>t.waktu.slice(0,10)===tglFilter);
-if(periode===“mingguan”){
-const base=new Date(tglFilter);base.setDate(base.getDate()-base.getDay());
-const end=new Date(base);end.setDate(end.getDate()+6);
-return txList.filter(t=>{const d=new Date(t.waktu);return d>=base&&d<=end;});
-}
-if(periode===“bulanan”) return txList.filter(t=>t.waktu.slice(0,7)===bulanFilter);
-return txList;
-};
-const filtered=filterTx(transaksi);
-const totalPendapatan=filtered.reduce((a,t)=>a+t.total,0);
-const totalTransaksi=filtered.length;
-const rataPerTx=totalTransaksi>0?Math.round(totalPendapatan/totalTransaksi):0;
-
-// Menu terlaris dalam periode
-const menuCount={};
-filtered.forEach(t=>t.items.forEach(i=>{menuCount[i.nama]=(menuCount[i.nama]||0)+i.qty;}));
-const terlaris=Object.entries(menuCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
-
-// Pendapatan per hari (untuk grafik mini)
-const perHari={};
-filtered.forEach(t=>{const d=t.waktu.slice(0,10);perHari[d]=(perHari[d]||0)+t.total;});
-const hariEntries=Object.entries(perHari).sort(([a],[b])=>a>b?1:-1);
-const maxHari=Math.max(…Object.values(perHari),1);
-
-return (
-<div style={{padding:“16px 20px”}}>
-{/* Periode selector */}
-<div style={{display:“flex”,gap:6,marginBottom:16}}>
-{[[“harian”,“Harian”],[“mingguan”,“Mingguan”],[“bulanan”,“Bulanan”]].map(([v,l])=>(
-<button key={v} onClick={()=>setPeriode(v)} style={{flex:1,padding:“8px 4px”,borderRadius:10,border:“1.5px solid”,borderColor:periode===v?”#6366f1”:”#2a2a3e”,background:periode===v?”#1e1b4b”:”#1a1a24”,color:periode===v?”#a5b4fc”:”#6b7280”,fontSize:12,fontWeight:700,cursor:“pointer”}}>{l}</button>
-))}
-</div>
-
-```
-  {/* Filter tanggal */}
-  <div style={{marginBottom:16}}>
-    {(periode==="harian"||periode==="mingguan")&&(
-      <input type="date" value={tglFilter} onChange={e=>setTglFilter(e.target.value)} style={inputStyle}/>
-    )}
-    {periode==="bulanan"&&(
-      <input type="month" value={bulanFilter} onChange={e=>setBulanFilter(e.target.value)} style={inputStyle}/>
-    )}
-  </div>
-
-  {/* Summary cards */}
-  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
-    <Card bg="linear-gradient(135deg,#6366f1,#8b5cf6)">
-      <div style={{fontSize:10,color:"rgba(255,255,255,.7)",fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Total Pendapatan</div>
-      <div style={{fontSize:20,fontWeight:900,color:"#fff",marginTop:4}}>{fmt(totalPendapatan)}</div>
-      <div style={{fontSize:11,color:"rgba(255,255,255,.6)",marginTop:2}}>{totalTransaksi} transaksi</div>
-    </Card>
-    <Card bg="linear-gradient(135deg,#0f766e,#0d9488)">
-      <div style={{fontSize:10,color:"rgba(255,255,255,.7)",fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Rata-rata / Transaksi</div>
-      <div style={{fontSize:20,fontWeight:900,color:"#fff",marginTop:4}}>{fmt(rataPerTx)}</div>
-      <div style={{fontSize:11,color:"rgba(255,255,255,.6)",marginTop:2}}>{terlaris.length>0?`Top: ${terlaris[0][0]}`:"Belum ada"}</div>
-    </Card>
-  </div>
-
-  {/* Bar chart pendapatan per hari */}
-  {hariEntries.length>0&&(
-    <>
-      <SectionTitle>📈 Pendapatan Harian</SectionTitle>
-      <div style={{background:"#1a1a24",borderRadius:14,padding:"14px 16px",marginBottom:20}}>
-        <div style={{display:"flex",alignItems:"flex-end",gap:4,height:80}}>
-          {hariEntries.map(([tgl,val])=>(
-            <div key={tgl} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-              <div style={{width:"100%",background:"#6366f1",borderRadius:"4px 4px 0 0",height:`${Math.round((val/maxHari)*70)+4}px`,minHeight:4,opacity:0.85}}/>
-              <div style={{fontSize:9,color:"#4b5563",textAlign:"center",lineHeight:1}}>{tgl.slice(5)}</div>
+          <ST>📋 Riwayat Pembelian</ST>
+          {bahan.filter(b=>(b.riwayat||[]).length>0).flatMap(b=>(b.riwayat||[]).map((r,i)=>({...r,bahan:b.nama,key:`${b.id}_${i}`}))).sort((a,z)=>z.tanggal>a.tanggal?1:-1).slice(0,20).map(r=>(
+            <div key={r.key} style={{background:"#1a1a24",borderRadius:12,padding:"10px 14px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div>
+                <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{r.bahan}</div>
+                <div style={{fontSize:11,color:"#6b7280"}}>{fmtTgl(r.tanggal)} · {r.qty>=1000?`${(r.qty/1000).toFixed(2)} kg/L`:`${r.qty} satuan`}</div>
+              </div>
+              <div style={{fontSize:13,fontWeight:800,color:"#22c55e",fontFamily:"'Space Mono'"}}>{fmt(r.harga)}</div>
             </div>
           ))}
         </div>
-      </div>
-    </>
-  )}
+      )}
 
-  {/* Menu terlaris */}
-  <SectionTitle>🏆 Menu Terlaris ({periode})</SectionTitle>
-  {terlaris.length===0?<EmptyState text="Belum ada transaksi di periode ini"/>:
-    terlaris.map(([nama,qty],i)=>{
-      const tot=filtered.filter(t=>t.items.some(x=>x.nama===nama)).reduce((a,t)=>a+t.items.filter(x=>x.nama===nama).reduce((s,x)=>s+x.harga*x.qty,0),0);
-      return (
-        <div key={nama} style={{background:"#1a1a24",borderRadius:12,padding:"10px 16px",marginBottom:8,display:"flex",alignItems:"center",gap:12}}>
-          <div style={{width:28,height:28,background:["#f59e0b","#94a3b8","#cd7c2f","#4b5563","#4b5563"][i],borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"#fff",fontFamily:"'Space Mono'"}}>{i+1}</div>
-          <div style={{flex:1}}>
-            <div style={{fontSize:14,fontWeight:700,color:"#e2e8f0"}}>{nama}</div>
-            <div style={{fontSize:11,color:"#6b7280"}}>{qty} porsi terjual</div>
+      {subTab==="perlengkapan"&&(
+        <div style={{padding:"16px 20px"}}>
+          <div style={{background:"#1a1a24",borderRadius:16,padding:"16px",marginBottom:16}}>
+            <div style={{fontSize:13,fontWeight:800,color:"#6366f1",marginBottom:12}}>📦 Tambah Perlengkapan</div>
+            <FG label="Nama"><input value={plNama} onChange={e=>setPlNama(e.target.value)} placeholder="Sendok plastik, box, dll..." style={IS}/></FG>
+            <FG label="Jumlah Stok (pcs)"><input type="number" value={plQty} onChange={e=>setPlQty(e.target.value)} placeholder="100" style={IS}/></FG>
+            <button onClick={()=>{if(!plNama||!plQty)return alert("Isi semua field!");setPerlengkapan(prev=>({...prev,["pl"+uid()]:{nama:plNama,stok_awal:Number(plQty),stok_saat_ini:Number(plQty),satuan:"pcs"}}));setPlNama("");setPlQty("");}} style={{...BS("#6366f1"),width:"100%",justifyContent:"center",padding:"11px"}}><Icon name="plus" size={15} color="#fff"/> Tambah</button>
           </div>
-          <div style={{fontSize:13,fontWeight:800,color:"#22c55e",fontFamily:"'Space Mono'"}}>{fmt(tot)}</div>
+          {Object.entries(perlengkapan).map(([id,p])=>{
+            const pct=p.stok_awal>0?Math.round((p.stok_saat_ini/p.stok_awal)*100):0;
+            const w=getWarna(pct);
+            return (
+              <div key={id} style={{background:"#1a1a24",borderRadius:14,padding:"13px 15px",marginBottom:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                  <div style={{fontSize:14,fontWeight:800,color:"#e2e8f0"}}>{p.nama}</div>
+                  <div style={{fontFamily:"'Space Mono'",fontSize:13,color:w.bg,fontWeight:700}}>{pct}%</div>
+                </div>
+                <div style={{background:"#0f0f18",borderRadius:6,height:7,overflow:"hidden",marginBottom:6}}><div style={{width:`${pct}%`,height:"100%",background:w.bg,borderRadius:6}}/></div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <span style={{fontSize:12,color:"#9ca3af",fontFamily:"'Space Mono'"}}>{p.stok_saat_ini} / {p.stok_awal} pcs</span>
+                  <button onClick={()=>setPerlengkapan(prev=>{const n={...prev};delete n[id];return n;})} style={{background:"none",border:"none",cursor:"pointer",padding:4}}><Icon name="trash" size={15} color="#4b5563"/></button>
+                </div>
+              </div>
+            );
+          })}
         </div>
-      );
-    })
-  }
+      )}
 
-  {/* Daftar transaksi */}
-  <SectionTitle style={{marginTop:16}}>🧾 Riwayat Transaksi</SectionTitle>
-  {filtered.length===0?<EmptyState text="Tidak ada transaksi di periode ini"/>:
-    filtered.map(t=>(
-      <div key={t.id} style={{background:"#1a1a24",borderRadius:12,padding:"10px 16px",marginBottom:8}}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-          <div>
-            <span style={{fontSize:12,color:"#6b7280",fontFamily:"'Space Mono'"}}>{fmtJam(t.waktu)}</span>
-            <span style={{fontSize:10,marginLeft:6,background:t.tipe==="takeaway"?"#1a1400":"#0f1a2e",color:t.tipe==="takeaway"?"#fbbf24":"#60a5fa",padding:"1px 6px",borderRadius:8,fontWeight:700}}>{t.tipe==="takeaway"?"Take Away":"Dine In"}</span>
+      {subTab==="ops"&&(
+        <div style={{padding:"16px 20px"}}>
+          <div style={{background:"#1a1a24",borderRadius:16,padding:"16px",marginBottom:12}}>
+            <div style={{fontSize:13,fontWeight:800,color:"#6366f1",marginBottom:4}}>⚙️ Biaya Operasional Global</div>
+            <div style={{fontSize:11,color:"#4b5563",marginBottom:14,lineHeight:1.6}}>Dipakai dalam perhitungan HPP semua produk. Ubah di sini berlaku global.</div>
+            {Object.entries(biayaOps).map(([k,v])=>(
+              <div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                <label style={{fontSize:14,color:"#e2e8f0",fontWeight:700,textTransform:"capitalize"}}>{k==="labor"?"Labor Cost":k.charAt(0).toUpperCase()+k.slice(1)}</label>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <input type="number" value={v} onChange={e=>setBiayaOps(p=>({...p,[k]:Number(e.target.value)}))} style={{...IS,width:90,textAlign:"right",marginBottom:0}}/>
+                  <span style={{fontSize:12,color:"#6b7280",whiteSpace:"nowrap"}}>Rp/porsi</span>
+                </div>
+              </div>
+            ))}
+            <div style={{height:1,background:"#2a2a3e",margin:"10px 0"}}/>
+            <R label="Total per porsi" value={fmt(Object.values(biayaOps).reduce((a,b)=>a+Number(b),0))} bold/>
           </div>
-          <span style={{fontSize:14,fontWeight:800,color:"#22c55e"}}>{fmt(t.total)}</span>
         </div>
-        <div style={{fontSize:12,color:"#9ca3af"}}>{t.items.map(i=>`${i.nama} ×${i.qty}`).join(", ")}</div>
-      </div>
-    ))
-  }
-</div>
-```
-
-);
+      )}
+    </div>
+  );
 }
 
-```
-const root=ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App/>);
-```
+function BahanForm({bahan,onSave,onBack}) {
+  const [nama,setNama]=useState(bahan?.nama||"");
+  const [satuan,setSatuan]=useState(bahan?.satuan||"gram");
+  const [harga,setHarga]=useState(bahan?.harga_per_satuan||"");
+  const handleSave=()=>{
+    if(!nama||!satuan) return alert("Lengkapi nama dan satuan!");
+    onSave({...bahan,nama,satuan,harga_per_satuan:Number(harga)||0});
+  };
+  return (
+    <div style={{padding:"16px 20px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+        <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer"}}><Icon name="back" size={22} color="#9ca3af"/></button>
+        <div style={{fontSize:16,fontWeight:800,color:"#e2e8f0"}}>{bahan?"Detail Bahan":"Tambah Bahan Baru"}</div>
+      </div>
+      <FG label="Nama Bahan"><input value={nama} onChange={e=>setNama(e.target.value)} placeholder="Ayam, Tepung, Telur..." style={IS}/></FG>
+      <FG label="Satuan Dasar">
+        <select value={satuan} onChange={e=>setSatuan(e.target.value)} style={IS}>
+          {["gram","ml","pcs","liter"].map(s=><option key={s}>{s}</option>)}
+        </select>
+      </FG>
+      <FG label={`Harga per satuan (Rp/${satuan==="gram"?"gram — isi 0, update saat restock":"pcs"})`}>
+        <input type="number" value={harga} onChange={e=>setHarga(e.target.value)} placeholder="0" style={IS}/>
+      </FG>
+      <div style={{background:"#1a1a24",borderRadius:12,padding:"12px 14px",marginBottom:16}}>
+        <div style={{fontSize:12,color:"#6b7280",lineHeight:1.7}}>💡 Harga otomatis terupdate saat kamu input restock di tab "Update Stok".</div>
+      </div>
+      <button onClick={handleSave} style={{...BS("#6366f1"),width:"100%",justifyContent:"center",padding:"13px"}}><Icon name="check" size={16} color="#fff"/> Simpan Bahan</button>
+    </div>
+  );
+}
 
+// ─── KOMPONEN PAGE ────────────────────────────────────────────────────────────
+function KomponenPage({komponen,setKomponen,bahan}) {
+  const [view,setView]=useState("list");
+  const [editKo,setEditKo]=useState(null);
+
+  const saveKo=(ko)=>{
+    if(ko.id&&komponen.find(k=>k.id===ko.id)) setKomponen(prev=>prev.map(k=>k.id===ko.id?ko:k));
+    else setKomponen(prev=>[...prev,{...ko,id:"ko"+uid()}]);
+    setView("list");setEditKo(null);
+  };
+  const deleteKo=(id)=>setKomponen(prev=>prev.filter(k=>k.id!==id));
+
+  if(view==="form") return <KomponenForm ko={editKo} bahan={bahan} komponen={komponen} onSave={saveKo} onBack={()=>{setView("list");setEditKo(null);}}/>;
+
+  return (
+    <div style={{padding:"16px 20px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <span style={{fontSize:13,color:"#6b7280"}}>{komponen.length} komponen / resep</span>
+        <button onClick={()=>{setEditKo(null);setView("form");}} style={BS("#6366f1")}><Icon name="plus" size={15} color="#fff"/> Tambah</button>
+      </div>
+      <div style={{background:"#1a1a24",borderRadius:12,padding:"12px 14px",marginBottom:14}}>
+        <div style={{fontSize:12,color:"#6b7280",lineHeight:1.7}}>🧩 Komponen adalah resep setengah jadi yang bisa dipakai di banyak produk. Contoh: <strong style={{color:"#9ca3af"}}>Sambal Geprek</strong>, <strong style={{color:"#9ca3af"}}>Ayam Goreng</strong>, <strong style={{color:"#9ca3af"}}>Nasi Putih</strong>.</div>
+      </div>
+      {komponen.map(ko=>{
+        const hpp=hppKomponen(ko.id,komponen,bahan);
+        const yp=ko.yield_mode==="batch"?(ko.yield_porsi||1):1;
+        return (
+          <div key={ko.id} style={{background:"#1a1a24",borderRadius:14,padding:"13px 15px",marginBottom:10}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+              <div>
+                <div style={{fontSize:14,fontWeight:800,color:"#e2e8f0"}}>{ko.nama}</div>
+                <div style={{fontSize:11,color:"#6b7280",marginTop:2}}>
+                  {ko.yield_mode==="batch"?`Batch ${ko.batch_qty}x → ${ko.yield_porsi} porsi`:"Per porsi"}
+                  {" · "}{ko.detail.length} bahan/komponen
+                </div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontSize:13,fontWeight:800,color:"#22c55e",fontFamily:"'Space Mono'"}}>{fmt(hpp)}</div>
+                <div style={{fontSize:10,color:"#6b7280"}}>/porsi</div>
+              </div>
+            </div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:8}}>
+              {ko.detail.map((d,i)=>{
+                const label=d.tipe==="bahan"?bahan.find(b=>b.id===d.item_id)?.nama:komponen.find(k=>k.id===d.item_id)?.nama;
+                return <span key={i} style={{fontSize:10,background:d.tipe==="komponen"?"#1e1b4b":"#0f0f18",color:d.tipe==="komponen"?"#a5b4fc":"#9ca3af",padding:"2px 8px",borderRadius:20,border:"1px solid #2a2a3e"}}>{label||"?"} {d.qty}{d.satuan}</span>;
+              })}
+            </div>
+            <div style={{display:"flex",gap:6}}>
+              <button onClick={()=>{setEditKo(ko);setView("form");}} style={{...BS("#2563eb"),fontSize:11,padding:"5px 11px"}}>Edit</button>
+              <button onClick={()=>deleteKo(ko.id)} style={{...BS("#7f1d1d"),fontSize:11,padding:"5px 11px"}}>Hapus</button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function KomponenForm({ko,bahan,komponen,onSave,onBack}) {
+  const [nama,setNama]=useState(ko?.nama||"");
+  const [yieldMode,setYieldMode]=useState(ko?.yield_mode||"batch");
+  const [batchQty,setBatchQty]=useState(ko?.batch_qty||1);
+  const [yieldPorsi,setYieldPorsi]=useState(ko?.yield_porsi||1);
+  const [detail,setDetail]=useState(ko?.detail||[{item_id:"",tipe:"bahan",qty:"",satuan:"gram"}]);
+
+  const addDetail=()=>setDetail(prev=>[...prev,{item_id:"",tipe:"bahan",qty:"",satuan:"gram"}]);
+  const removeDetail=(i)=>setDetail(prev=>prev.filter((_,idx)=>idx!==i));
+  const updateDetail=(i,field,val)=>setDetail(prev=>prev.map((d,idx)=>{
+    if(idx!==i) return d;
+    const nd={...d,[field]:val};
+    if(field==="item_id"&&d.tipe==="bahan"){const b=bahan.find(x=>x.id===val);if(b) nd.satuan=b.satuan;}
+    if(field==="tipe"){ nd.item_id=""; nd.satuan="gram"; }
+    return nd;
+  }));
+
+  const handleSave=()=>{
+    if(!nama||detail.some(d=>!d.item_id||!d.qty)) return alert("Lengkapi semua field!");
+    onSave({...ko,nama,yield_mode:yieldMode,batch_qty:Number(batchQty),yield_porsi:Number(yieldPorsi),detail:detail.map(d=>({...d,qty:Number(d.qty)}))});
+  };
+
+  const availKomponen=komponen.filter(k=>k.id!==ko?.id);
+  const hppPreview=()=>{
+    let total=0;
+    detail.forEach(d=>{
+      if(!d.item_id||!d.qty) return;
+      if(d.tipe==="bahan"){const b=bahan.find(x=>x.id===d.item_id);if(b) total+=Number(d.qty)*b.harga_per_satuan;}
+      else{const subHpp=hppKomponen(d.item_id,komponen,bahan);total+=subHpp*Number(d.qty);}
+    });
+    const yp=yieldMode==="batch"?(Number(yieldPorsi)||1):1;
+    return Math.round(total/yp);
+  };
+
+  return (
+    <div style={{padding:"16px 20px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+        <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer"}}><Icon name="back" size={22} color="#9ca3af"/></button>
+        <div style={{fontSize:16,fontWeight:800,color:"#e2e8f0"}}>{ko?"Edit Komponen":"Tambah Komponen"}</div>
+      </div>
+      <FG label="Nama Komponen"><input value={nama} onChange={e=>setNama(e.target.value)} placeholder="Ayam Goreng Tepung, Sambal..." style={IS}/></FG>
+
+      <div style={{background:"#1a1a24",borderRadius:12,padding:"14px",marginBottom:12}}>
+        <div style={{fontSize:12,fontWeight:800,color:"#6b7280",marginBottom:10,textTransform:"uppercase",letterSpacing:1}}>Yield / Hasil Jadi</div>
+        <div style={{display:"flex",gap:8,marginBottom:10}}>
+          {[["batch","Input Total Batch"],["per_porsi","Input Per Porsi"]].map(([v,l])=>(
+            <button key={v} onClick={()=>setYieldMode(v)} style={{flex:1,padding:"8px",borderRadius:9,border:"1.5px solid",borderColor:yieldMode===v?"#6366f1":"#2a2a3e",background:yieldMode===v?"#1e1b4b":"#0f0f18",color:yieldMode===v?"#a5b4fc":"#6b7280",fontSize:11,fontWeight:700,cursor:"pointer"}}>{l}</button>
+          ))}
+        </div>
+        {yieldMode==="batch"?(
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <FG label="Qty 1 batch (porsi bahan)">
+              <input type="number" value={batchQty} onChange={e=>setBatchQty(e.target.value)} style={{...IS,marginBottom:0}}/>
+            </FG>
+            <FG label="Hasil jadi (porsi)">
+              <input type="number" value={yieldPorsi} onChange={e=>setYieldPorsi(e.target.value)} style={{...IS,marginBottom:0}}/>
+            </FG>
+          </div>
+        ):<div style={{fontSize:12,color:"#6b7280",padding:"6px 0"}}>Bahan diinput langsung untuk 1 porsi.</div>}
+      </div>
+
+      <div style={{marginBottom:14}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <label style={LS}>Daftar Bahan / Sub-komponen</label>
+          <button onClick={addDetail} style={{...BS("#4b5563"),fontSize:11,padding:"4px 10px"}}><Icon name="plus" size={13} color="#fff"/> Tambah</button>
+        </div>
+        {detail.map((d,i)=>(
+          <div key={i} style={{background:"#1a1a24",borderRadius:11,padding:"11px",marginBottom:8,border:`1.5px solid ${d.tipe==="komponen"?"#1e1b4b":"#1f1f2e"}`}}>
+            <div style={{display:"flex",gap:6,marginBottom:7}}>
+              {[["bahan","🌾 Bahan"],["komponen","🧩 Komponen"]].map(([v,l])=>(
+                <button key={v} onClick={()=>updateDetail(i,"tipe",v)} style={{flex:1,padding:"5px",borderRadius:7,border:"1.5px solid",borderColor:d.tipe===v?"#6366f1":"#2a2a3e",background:d.tipe===v?"#1e1b4b":"#0f0f18",color:d.tipe===v?"#a5b4fc":"#6b7280",fontSize:11,fontWeight:700,cursor:"pointer"}}>{l}</button>
+              ))}
+              <button onClick={()=>removeDetail(i)} style={{background:"none",border:"none",cursor:"pointer",padding:4}}><Icon name="close" size={16} color="#6b7280"/></button>
+            </div>
+            <select value={d.item_id} onChange={e=>updateDetail(i,"item_id",e.target.value)} style={{...IS,marginBottom:7}}>
+              <option value="">-- Pilih {d.tipe} --</option>
+              {d.tipe==="bahan"?bahan.map(b=><option key={b.id} value={b.id}>{b.nama} ({b.satuan})</option>):availKomponen.map(k=><option key={k.id} value={k.id}>{k.nama}</option>)}
+            </select>
+            <div style={{display:"flex",gap:6}}>
+              <input type="number" value={d.qty} onChange={e=>updateDetail(i,"qty",e.target.value)} placeholder="Qty" style={{...IS,flex:1,marginBottom:0}}/>
+              {d.tipe==="bahan"&&<select value={d.satuan} onChange={e=>updateDetail(i,"satuan",e.target.value)} style={{...IS,flex:1,marginBottom:0}}>{["gram","ml","kg","liter","pcs"].map(s=><option key={s}>{s}</option>)}</select>}
+              {d.tipe==="komponen"&&<div style={{flex:1,background:"#0f0f18",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#6b7280"}}>porsi</div>}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {detail.some(d=>d.item_id&&d.qty)&&(
+        <div style={{background:"#0f2a1e",borderRadius:10,padding:"10px 14px",marginBottom:14,display:"flex",justifyContent:"space-between"}}>
+          <span style={{fontSize:12,color:"#6ee7b7"}}>HPP per porsi (estimasi):</span>
+          <span style={{fontSize:14,fontWeight:800,color:"#22c55e",fontFamily:"'Space Mono'"}}>{fmt(hppPreview())}</span>
+        </div>
+      )}
+
+      <button onClick={handleSave} style={{...BS("#6366f1"),width:"100%",justifyContent:"center",padding:"13px"}}><Icon name="check" size={16} color="#fff"/> Simpan Komponen</button>
+    </div>
+  );
+}
+
+// ─── PRODUK PAGE ──────────────────────────────────────────────────────────────
+function ProdukPage({produk,setProduk,komponen,bahan,biayaOps,paket,setPaket}) {
+  const [subTab,setSubTab]=useState("produk");
+  const [view,setView]=useState("list");
+  const [editPr,setEditPr]=useState(null);
+  const [hppView,setHppView]=useState(null);
+  const [editPkt,setEditPkt]=useState(null);
+
+  const saveProduk=(pr)=>{
+    if(pr.id&&produk.find(p=>p.id===pr.id)) setProduk(prev=>prev.map(p=>p.id===pr.id?pr:p));
+    else setProduk(prev=>[...prev,{...pr,id:"pr"+uid()}]);
+    setView("list");setEditPr(null);
+  };
+
+  if(hppView) return <HppDetailView pr={hppView} komponen={komponen} bahan={bahan} biayaOps={biayaOps} onBack={()=>setHppView(null)}/>;
+  if(view==="form") return <ProdukForm pr={editPr} komponen={komponen} bahan={bahan} biayaOps={biayaOps} onSave={saveProduk} onBack={()=>{setView("list");setEditPr(null);}}/>;
+  if(editPkt!==null) return <PaketForm pkt={editPkt===false?null:editPkt} produk={produk} onSave={(p)=>{if(p.id&&paket.find(x=>x.id===p.id))setPaket(prev=>prev.map(x=>x.id===p.id?p:x));else setPaket(prev=>[...prev,{...p,id:"pk"+uid()}]);setEditPkt(null);}} onBack={()=>setEditPkt(null)}/>;
+
+  const kategoris=[...new Set(produk.map(p=>p.kategori))];
+
+  return (
+    <div style={{padding:"0 0 16px"}}>
+      <div style={{display:"flex",borderBottom:"1px solid #2a2a3e"}}>
+        {[["produk","Produk"],["paket","Paket"]].map(([id,lbl])=>(
+          <button key={id} onClick={()=>setSubTab(id)} style={{flex:1,padding:"11px 0",background:"none",border:"none",borderBottom:subTab===id?"2px solid #6366f1":"2px solid transparent",color:subTab===id?"#6366f1":"#6b7280",fontSize:13,fontWeight:700,cursor:"pointer"}}>{lbl}</button>
+        ))}
+      </div>
+
+      {subTab==="produk"&&(
+        <div style={{padding:"16px 20px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+            <span style={{fontSize:13,color:"#6b7280"}}>{produk.length} produk</span>
+            <button onClick={()=>{setEditPr(null);setView("form");}} style={BS("#6366f1")}><Icon name="plus" size={15} color="#fff"/> Tambah</button>
+          </div>
+          {kategoris.map(kat=>(
+            <div key={kat} style={{marginBottom:20}}>
+              <div style={{fontSize:11,fontWeight:800,color:"#6366f1",letterSpacing:2,textTransform:"uppercase",marginBottom:8}}>{kat}</div>
+              {produk.filter(p=>p.kategori===kat).map(pr=>{
+                const hpp=hppProduk(pr,komponen,bahan,biayaOps);
+                const {porsi}=hitungPorsiProduk(pr,komponen,bahan);
+                return (
+                  <div key={pr.id} style={{background:"#1a1a24",borderRadius:14,padding:"13px 15px",marginBottom:10}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                      <div>
+                        <div style={{fontSize:15,fontWeight:800,color:"#e2e8f0"}}>{pr.nama}</div>
+                        <div style={{fontSize:11,color:"#6b7280",marginTop:2}}>HPP {fmt(hpp.hpp_total)} · {porsi} porsi tersedia</div>
+                      </div>
+                      <div style={{textAlign:"right"}}>
+                        <div style={{fontSize:15,fontWeight:800,color:"#22c55e"}}>{fmt(pr.harga_jual)}</div>
+                        <div style={{fontSize:10,color:"#6b7280"}}>margin {Math.round((1-hpp.hpp_total/pr.harga_jual)*100)}%</div>
+                      </div>
+                    </div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:8}}>
+                      {pr.komposisi.map((k,i)=>{const label=komponen.find(x=>x.id===k.item_id)?.nama||bahan.find(x=>x.id===k.item_id)?.nama||"?";return <span key={i} style={{fontSize:10,background:"#1e1b4b",color:"#a5b4fc",padding:"2px 8px",borderRadius:20,border:"1px solid #2a2a3e"}}>{label} ×{k.qty}</span>;})}
+                    </div>
+                    <div style={{display:"flex",gap:6}}>
+                      <button onClick={()=>setHppView(pr)} style={{...BS("#0f766e"),fontSize:11,padding:"5px 11px"}}>HPP Detail</button>
+                      <button onClick={()=>{setEditPr(pr);setView("form");}} style={{...BS("#2563eb"),fontSize:11,padding:"5px 11px"}}>Edit</button>
+                      <button onClick={()=>setProduk(prev=>prev.filter(p=>p.id!==pr.id))} style={{...BS("#7f1d1d"),fontSize:11,padding:"5px 11px"}}>Hapus</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {subTab==="paket"&&(
+        <div style={{padding:"16px 20px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+            <span style={{fontSize:13,color:"#6b7280"}}>{paket.length} paket</span>
+            <button onClick={()=>setEditPkt(false)} style={BS("#6366f1")}><Icon name="plus" size={15} color="#fff"/> Buat Paket</button>
+          </div>
+          {paket.length===0?<Empty t="Belum ada paket. Buat paket untuk menggabungkan beberapa produk."/>:paket.map(p=>(
+            <div key={p.id} style={{background:"#1a1a24",borderRadius:14,padding:"13px 15px",marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                <div style={{fontSize:15,fontWeight:800,color:"#e2e8f0"}}>{p.nama}</div>
+                <div style={{fontSize:15,fontWeight:800,color:"#22c55e"}}>{fmt(p.harga_jual)}</div>
+              </div>
+              <div style={{fontSize:12,color:"#6b7280",marginBottom:8}}>Isi: {(p.items||[]).map(i=>{const m=produk.find(x=>x.id===i.produk_id);return m?`${m.nama}×${i.qty}`:""}).filter(Boolean).join(", ")}</div>
+              <div style={{display:"flex",gap:6}}>
+                <button onClick={()=>setEditPkt(p)} style={{...BS("#2563eb"),fontSize:11,padding:"5px 11px"}}>Edit</button>
+                <button onClick={()=>setPaket(prev=>prev.filter(x=>x.id!==p.id))} style={{...BS("#7f1d1d"),fontSize:11,padding:"5px 11px"}}>Hapus</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HppDetailView({pr,komponen,bahan,biayaOps,onBack}) {
+  const hpp=hppProduk(pr,komponen,bahan,biayaOps);
+  const margins=[10,20,30,50];
+  return (
+    <div style={{padding:"16px 20px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+        <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer"}}><Icon name="back" size={22} color="#9ca3af"/></button>
+        <div style={{fontSize:16,fontWeight:800,color:"#e2e8f0"}}>HPP Detail · {pr.nama}</div>
+      </div>
+      <ST>🧩 Breakdown per Komponen</ST>
+      {pr.komposisi.map((k,i)=>{
+        const ko=komponen.find(x=>x.id===k.item_id);
+        const subHpp=ko?hppKomponen(k.item_id,komponen,bahan):0;
+        return (
+          <div key={i} style={{background:"#1a1a24",borderRadius:12,padding:"12px 14px",marginBottom:8}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+              <div>
+                <div style={{fontSize:13,fontWeight:800,color:"#e2e8f0"}}>{ko?.nama||"?"} ×{k.qty}</div>
+                <div style={{fontSize:11,color:"#6b7280"}}>{ko?.yield_mode==="batch"?`Batch ${ko.batch_qty}x → ${ko.yield_porsi} porsi`:"per porsi"}</div>
+              </div>
+              <div style={{fontSize:14,fontWeight:800,color:"#a5b4fc",fontFamily:"'Space Mono'"}}>{fmt(subHpp*k.qty)}</div>
+            </div>
+            {ko?.detail.map((d,j)=>{
+              const b=bahan.find(x=>x.id===d.item_id);
+              const subKo=komponen.find(x=>x.id===d.item_id);
+              const yp=ko.yield_mode==="batch"?(ko.yield_porsi||1):1;
+              const biaya=b?(d.qty/yp)*b.harga_per_satuan*k.qty:subKo?(hppKomponen(d.item_id,komponen,bahan)/yp)*d.qty*k.qty:0;
+              return (
+                <div key={j} style={{display:"flex",justifyContent:"space-between",padding:"3px 0",borderBottom:"1px solid #1f1f2e"}}>
+                  <span style={{fontSize:11,color:"#6b7280",paddingLeft:8}}>↳ {b?.nama||subKo?.nama||"?"} {d.qty}{d.satuan}</span>
+                  <span style={{fontSize:11,color:"#94a3b8"}}>{fmt(Math.round(biaya))}</span>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+      <div style={{background:"#1a1a24",borderRadius:12,padding:"14px",margin:"14px 0"}}>
+        <R label="Total Bahan (via komponen)" value={fmt(hpp.hpp_komponen)}/>
+        <R label="Biaya Operasional" value={fmt(hpp.ops)} sm/>
+        <div style={{height:1,background:"#2a2a3e",margin:"8px 0"}}/>
+        <R label="HPP Total" value={fmt(hpp.hpp_total)} bold/>
+        <R label="Harga Jual" value={fmt(pr.harga_jual)} bold/>
+        <div style={{height:1,background:"#2a2a3e",margin:"8px 0"}}/>
+        <R label={`Margin ${Math.round((1-hpp.hpp_total/pr.harga_jual)*100)}%`} value={fmt(pr.harga_jual-hpp.hpp_total)} bold/>
+      </div>
+      <ST>📈 Simulasi Margin</ST>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+        {margins.map(m=>(
+          <div key={m} style={{background:"#1a1a24",borderRadius:12,padding:"12px 10px",textAlign:"center"}}>
+            <div style={{fontSize:19,fontWeight:900,color:m===30?"#6366f1":"#e2e8f0"}}>{m}%</div>
+            <div style={{fontSize:10,color:"#6b7280",marginBottom:3}}>Margin</div>
+            <div style={{fontSize:13,fontWeight:800,color:"#22c55e"}}>{fmt(Math.round(hpp.hpp_total/(1-m/100)))}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ProdukForm({pr,komponen,bahan,biayaOps,onSave,onBack}) {
+  const [nama,setNama]=useState(pr?.nama||"");
+  const [kat,setKat]=useState(pr?.kategori||"Makanan");
+  const [harga,setHarga]=useState(pr?.harga_jual||"");
+  const [komposisi,setKomposisi]=useState(pr?.komposisi||[{item_id:"",tipe:"komponen",qty:1}]);
+
+  const addK=()=>setKomposisi(prev=>[...prev,{item_id:"",tipe:"komponen",qty:1}]);
+  const removeK=(i)=>setKomposisi(prev=>prev.filter((_,idx)=>idx!==i));
+  const updateK=(i,f,v)=>setKomposisi(prev=>prev.map((k,idx)=>{if(idx!==i)return k;const nk={...k,[f]:v};if(f==="tipe")nk.item_id="";return nk;}));
+
+  const hppPrev=()=>{
+    let t=0;
+    komposisi.forEach(k=>{
+      if(!k.item_id||!k.qty) return;
+      if(k.tipe==="komponen") t+=hppKomponen(k.item_id,komponen,bahan)*Number(k.qty);
+      else{const b=bahan.find(x=>x.id===k.item_id);if(b) t+=k.qty*b.harga_per_satuan;}
+    });
+    return Math.round(t+Object.values(biayaOps).reduce((a,b)=>a+b,0));
+  };
+
+  const handleSave=()=>{
+    if(!nama||!harga||komposisi.some(k=>!k.item_id||!k.qty)) return alert("Lengkapi semua field!");
+    onSave({...pr,nama,kategori:kat,harga_jual:Number(harga),komposisi:komposisi.map(k=>({...k,qty:Number(k.qty)}))});
+  };
+
+  return (
+    <div style={{padding:"16px 20px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+        <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer"}}><Icon name="back" size={22} color="#9ca3af"/></button>
+        <div style={{fontSize:16,fontWeight:800,color:"#e2e8f0"}}>{pr?"Edit Produk":"Tambah Produk"}</div>
+      </div>
+      <FG label="Nama Produk"><input value={nama} onChange={e=>setNama(e.target.value)} placeholder="Mie Ayam, Bakso..." style={IS}/></FG>
+      <FG label="Kategori">
+        <select value={kat} onChange={e=>setKat(e.target.value)} style={IS}>
+          {["Makanan","Minuman","Snack","Paket"].map(k=><option key={k}>{k}</option>)}
+        </select>
+      </FG>
+      <FG label="Harga Jual (Rp)"><input type="number" value={harga} onChange={e=>setHarga(e.target.value)} placeholder="18000" style={IS}/></FG>
+
+      <div style={{marginBottom:14}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <label style={LS}>Komposisi Produk</label>
+          <button onClick={addK} style={{...BS("#4b5563"),fontSize:11,padding:"4px 10px"}}><Icon name="plus" size={13} color="#fff"/> Tambah</button>
+        </div>
+        {komposisi.map((k,i)=>(
+          <div key={i} style={{background:"#1a1a24",borderRadius:11,padding:"11px",marginBottom:8}}>
+            <div style={{display:"flex",gap:6,marginBottom:7,alignItems:"center"}}>
+              <select value={k.tipe} onChange={e=>updateK(i,"tipe",e.target.value)} style={{...IS,flex:1,marginBottom:0,fontSize:12}}>
+                <option value="komponen">🧩 Komponen</option>
+                <option value="bahan">🌾 Bahan Langsung</option>
+              </select>
+              <button onClick={()=>removeK(i)} style={{background:"none",border:"none",cursor:"pointer",padding:4}}><Icon name="close" size={16} color="#6b7280"/></button>
+            </div>
+            <div style={{display:"flex",gap:6}}>
+              <select value={k.item_id} onChange={e=>updateK(i,"item_id",e.target.value)} style={{...IS,flex:2,marginBottom:0}}>
+                <option value="">-- Pilih --</option>
+                {k.tipe==="komponen"?komponen.map(x=><option key={x.id} value={x.id}>{x.nama}</option>):bahan.map(x=><option key={x.id} value={x.id}>{x.nama} ({x.satuan})</option>)}
+              </select>
+              <input type="number" value={k.qty} onChange={e=>updateK(i,"qty",e.target.value)} placeholder="Qty" min={1} style={{...IS,width:65,marginBottom:0,textAlign:"center"}}/>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {komposisi.some(k=>k.item_id&&k.qty)&&(
+        <div style={{background:"#0f2a1e",borderRadius:10,padding:"10px 14px",marginBottom:14,display:"flex",justifyContent:"space-between"}}>
+          <span style={{fontSize:12,color:"#6ee7b7"}}>HPP estimasi (incl. biaya ops):</span>
+          <span style={{fontSize:14,fontWeight:800,color:"#22c55e",fontFamily:"'Space Mono'"}}>{fmt(hppPrev())}</span>
+        </div>
+      )}
+      <button onClick={handleSave} style={{...BS("#6366f1"),width:"100%",justifyContent:"center",padding:"13px"}}><Icon name="check" size={16} color="#fff"/> Simpan Produk</button>
+    </div>
+  );
+}
+
+function PaketForm({pkt,produk,onSave,onBack}) {
+  const [nama,setNama]=useState(pkt?.nama||"");
+  const [harga,setHarga]=useState(pkt?.harga_jual||"");
+  const [items,setItems]=useState(pkt?.items||[]);
+  const addItem=()=>setItems(prev=>[...prev,{produk_id:"",qty:1}]);
+  const removeItem=(i)=>setItems(prev=>prev.filter((_,idx)=>idx!==i));
+  const updateItem=(i,f,v)=>setItems(prev=>prev.map((x,idx)=>idx===i?{...x,[f]:v}:x));
+  const handleSave=()=>{
+    if(!nama||!harga||items.length===0||items.some(i=>!i.produk_id)) return alert("Lengkapi semua field!");
+    onSave({...pkt,nama,harga_jual:Number(harga),items,kategori:"Paket"});
+  };
+  return (
+    <div style={{padding:"16px 20px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+        <button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer"}}><Icon name="back" size={22} color="#9ca3af"/></button>
+        <div style={{fontSize:16,fontWeight:800,color:"#e2e8f0"}}>{pkt?"Edit Paket":"Buat Paket"}</div>
+      </div>
+      <FG label="Nama Paket"><input value={nama} onChange={e=>setNama(e.target.value)} placeholder="Paket Hemat A..." style={IS}/></FG>
+      <FG label="Harga Paket (Rp)"><input type="number" value={harga} onChange={e=>setHarga(e.target.value)} placeholder="25000" style={IS}/></FG>
+      <div style={{marginBottom:14}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <label style={LS}>Isi Paket</label>
+          <button onClick={addItem} style={{...BS("#4b5563"),fontSize:11,padding:"4px 10px"}}><Icon name="plus" size={13} color="#fff"/> Produk</button>
+        </div>
+        {items.map((item,i)=>(
+          <div key={i} style={{background:"#1a1a24",borderRadius:11,padding:"10px 12px",marginBottom:8,display:"flex",gap:8,alignItems:"center"}}>
+            <select value={item.produk_id} onChange={e=>updateItem(i,"produk_id",e.target.value)} style={{...IS,flex:2,marginBottom:0}}>
+              <option value="">-- Pilih produk --</option>
+              {produk.map(p=><option key={p.id} value={p.id}>{p.nama} ({fmt(p.harga_jual)})</option>)}
+            </select>
+            <input type="number" value={item.qty} onChange={e=>updateItem(i,"qty",Number(e.target.value))} min={1} style={{...IS,width:56,marginBottom:0,textAlign:"center"}}/>
+            <button onClick={()=>removeItem(i)} style={{background:"none",border:"none",cursor:"pointer"}}><Icon name="close" size={17} color="#6b7280"/></button>
+          </div>
+        ))}
+        {items.length>0&&<div style={{background:"#0f0f18",borderRadius:8,padding:"7px 12px",fontSize:11,color:"#6b7280"}}>Harga normal: {fmt(items.reduce((a,x)=>{const p=produk.find(q=>q.id===x.produk_id);return a+(p?p.harga_jual*x.qty:0);},0))}</div>}
+      </div>
+      <button onClick={handleSave} style={{...BS("#6366f1"),width:"100%",justifyContent:"center",padding:"13px"}}><Icon name="check" size={16} color="#fff"/> Simpan Paket</button>
+    </div>
+  );
+}
+
+// ─── KASIR ────────────────────────────────────────────────────────────────────
+function KasirPage({produk,paket,komponen,bahan,addTransaksi,perlengkapan,setPerlengkapan}) {
+  const [cart,setCart]=useState([]);
+  const [bayar,setBayar]=useState("");
+  const [tipe,setTipe]=useState("dine-in");
+  const [selPlk,setSelPlk]=useState([]);
+  const [kasirTab,setKasirTab]=useState("produk");
+  const [lastTx,setLastTx]=useState(null);
+  const [showStruk,setShowStruk]=useState(false);
+
+  const total=cart.reduce((a,i)=>a+i.harga*i.qty,0);
+  const kembalian=Number(bayar)-total;
+
+  const addCart=(id,nama,harga,jenis)=>{
+    setCart(prev=>{
+      const f=prev.find(x=>x.id===id);
+      if(f) return prev.map(x=>x.id===id?{...x,qty:x.qty+1}:x);
+      return [...prev,{id,nama,harga,qty:1,jenis}];
+    });
+  };
+  const chQty=(id,d)=>setCart(prev=>prev.map(x=>x.id===id?{...x,qty:Math.max(0,x.qty+d)}:x).filter(x=>x.qty>0));
+  const togglePlk=(id)=>setSelPlk(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
+
+  const handleBayar=()=>{
+    if(cart.length===0) return alert("Keranjang kosong!");
+    if(Number(bayar)<total) return alert("Bayar kurang!");
+    // Siapkan items untuk kurang stok
+    const itemsList=cart.map(item=>{
+      const produkObj=item.jenis==="produk"?produk.find(p=>p.id===item.id):null;
+      return {produk_id:item.id,qty:item.qty,produk_obj:produkObj};
+    });
+    // Kurangi perlengkapan
+    if(tipe==="takeaway"&&selPlk.length>0){
+      setPerlengkapan(prev=>{
+        const n={...prev};
+        selPlk.forEach(pid=>{if(n[pid]) n[pid]={...n[pid],stok_saat_ini:Math.max(0,n[pid].stok_saat_ini-cart.reduce((a,c)=>a+c.qty,0))};});
+        return n;
+      });
+    }
+    const tx={id:"tx"+uid(),waktu:new Date().toISOString(),items:cart,total,bayar:Number(bayar),kembalian,tipe};
+    addTransaksi(tx,itemsList);
+    setLastTx(tx);setShowStruk(true);
+    setCart([]);setBayar("");setSelPlk([]);
+  };
+
+  if(showStruk&&lastTx) return <StrukPage tx={lastTx} onClose={()=>setShowStruk(false)}/>;
+
+  const kategoris=[...new Set(produk.map(p=>p.kategori))];
+
+  return (
+    <div>
+      <div style={{display:"flex",gap:8,padding:"12px 20px 8px"}}>
+        {[["dine-in","Dine In"],["takeaway","Take Away"]].map(([v,l])=>(
+          <button key={v} onClick={()=>setTipe(v)} style={{flex:1,padding:"7px",borderRadius:9,border:"1.5px solid",borderColor:tipe===v?"#6366f1":"#2a2a3e",background:tipe===v?"#1e1b4b":"#1a1a24",color:tipe===v?"#a5b4fc":"#6b7280",fontSize:12,fontWeight:700,cursor:"pointer"}}>{l}</button>
+        ))}
+      </div>
+      <div style={{display:"flex",borderBottom:"1px solid #2a2a3e"}}>
+        {[["produk","Produk"],["paket","Paket"]].map(([id,lbl])=>(
+          <button key={id} onClick={()=>setKasirTab(id)} style={{flex:1,padding:"10px 0",background:"none",border:"none",borderBottom:kasirTab===id?"2px solid #6366f1":"2px solid transparent",color:kasirTab===id?"#6366f1":"#6b7280",fontSize:12,fontWeight:700,cursor:"pointer"}}>{lbl}</button>
+        ))}
+      </div>
+      <div style={{padding:"12px 20px 8px"}}>
+        {kasirTab==="produk"&&kategoris.map(kat=>(
+          <div key={kat} style={{marginBottom:14}}>
+            <div style={{fontSize:10,fontWeight:800,color:"#6366f1",letterSpacing:2,textTransform:"uppercase",marginBottom:7}}>{kat}</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              {produk.filter(p=>p.kategori===kat).map(pr=>{
+                const inCart=cart.find(x=>x.id===pr.id);
+                const {porsi}=hitungPorsiProduk(pr,komponen,bahan);
+                return (
+                  <button key={pr.id} onClick={()=>porsi>0&&addCart(pr.id,pr.nama,pr.harga_jual,"produk")} style={{background:inCart?"#1e1b4b":"#1a1a24",border:inCart?"1.5px solid #6366f1":"1.5px solid transparent",borderRadius:13,padding:"13px 11px",textAlign:"left",cursor:porsi>0?"pointer":"not-allowed",position:"relative",opacity:porsi===0?0.5:1}}>
+                    {inCart&&<div style={{position:"absolute",top:7,right:7,background:"#6366f1",color:"#fff",fontSize:10,fontWeight:800,borderRadius:20,padding:"1px 6px"}}>{inCart.qty}×</div>}
+                    {porsi===0&&<div style={{position:"absolute",top:7,left:7,background:"#7f1d1d",color:"#fca5a5",fontSize:9,fontWeight:800,borderRadius:20,padding:"1px 5px"}}>HABIS</div>}
+                    <div style={{fontSize:12,fontWeight:800,color:"#e2e8f0",marginBottom:3,lineHeight:1.2}}>{pr.nama}</div>
+                    <div style={{fontSize:13,fontWeight:900,color:"#22c55e"}}>{fmt(pr.harga_jual)}</div>
+                    <div style={{fontSize:10,color:"#4b5563",marginTop:2}}>{porsi} porsi</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+        {kasirTab==="paket"&&(paket.length===0?<Empty t="Belum ada paket"/>:
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            {paket.map(p=>{
+              const inCart=cart.find(x=>x.id===p.id);
+              return (
+                <button key={p.id} onClick={()=>addCart(p.id,p.nama,p.harga_jual,"paket")} style={{background:inCart?"#1e1b4b":"#1a1a24",border:inCart?"1.5px solid #6366f1":"1.5px solid transparent",borderRadius:13,padding:"13px 11px",textAlign:"left",cursor:"pointer",position:"relative"}}>
+                  {inCart&&<div style={{position:"absolute",top:7,right:7,background:"#6366f1",color:"#fff",fontSize:10,fontWeight:800,borderRadius:20,padding:"1px 6px"}}>{inCart.qty}×</div>}
+                  <div style={{fontSize:10,background:"#6366f1",color:"#fff",padding:"1px 5px",borderRadius:6,fontWeight:700,marginBottom:3,display:"inline-block"}}>PAKET</div>
+                  <div style={{fontSize:12,fontWeight:800,color:"#e2e8f0",marginBottom:3,lineHeight:1.2}}>{p.nama}</div>
+                  <div style={{fontSize:13,fontWeight:900,color:"#22c55e"}}>{fmt(p.harga_jual)}</div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {tipe==="takeaway"&&Object.keys(perlengkapan).length>0&&(
+        <div style={{padding:"8px 20px",background:"#111118",borderTop:"1px solid #1f1f2e"}}>
+          <div style={{fontSize:10,fontWeight:800,color:"#f59e0b",marginBottom:6,letterSpacing:1,textTransform:"uppercase"}}>🥡 Perlengkapan Take Away</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+            {Object.entries(perlengkapan).map(([id,p])=>{
+              const s=selPlk.includes(id);
+              return <button key={id} onClick={()=>togglePlk(id)} style={{padding:"4px 11px",borderRadius:20,border:"1.5px solid",borderColor:s?"#f59e0b":"#2a2a3e",background:s?"#1a1400":"#1a1a24",color:s?"#fbbf24":"#6b7280",fontSize:11,fontWeight:700,cursor:"pointer"}}>{s?"✓ ":""}{p.nama} ({p.stok_saat_ini})</button>;
+            })}
+          </div>
+        </div>
+      )}
+
+      {cart.length>0&&(
+        <div style={{background:"#1a1a24",borderTop:"1px solid #2a2a3e",padding:"14px 20px"}}>
+          <div style={{fontSize:11,fontWeight:800,color:"#6b7280",marginBottom:8,letterSpacing:1,textTransform:"uppercase"}}>🛒 Pesanan</div>
+          {cart.map(item=>(
+            <div key={item.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{item.nama}</div>
+                <div style={{fontSize:11,color:"#9ca3af"}}>{fmt(item.harga)} × {item.qty}</div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:7}}>
+                <div style={{fontSize:12,fontWeight:800,color:"#22c55e",marginRight:6}}>{fmt(item.harga*item.qty)}</div>
+                <button onClick={()=>chQty(item.id,-1)} style={{width:25,height:25,borderRadius:7,background:"#2a2a3e",border:"none",cursor:"pointer",color:"#e2e8f0",fontSize:15,fontWeight:700}}>−</button>
+                <span style={{fontSize:13,fontWeight:800,color:"#e2e8f0",minWidth:18,textAlign:"center"}}>{item.qty}</span>
+                <button onClick={()=>chQty(item.id,1)} style={{width:25,height:25,borderRadius:7,background:"#6366f1",border:"none",cursor:"pointer",color:"#fff",fontSize:15,fontWeight:700}}>+</button>
+              </div>
+            </div>
+          ))}
+          <div style={{height:1,background:"#2a2a3e",margin:"10px 0"}}/>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
+            <span style={{fontSize:14,fontWeight:800,color:"#e2e8f0"}}>Total</span>
+            <span style={{fontSize:17,fontWeight:900,color:"#22c55e",fontFamily:"'Space Mono'"}}>{fmt(total)}</span>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+            <FG label="Bayar (Rp)"><input type="number" value={bayar} onChange={e=>setBayar(e.target.value)} placeholder={total.toString()} style={{...IS,marginBottom:0}}/></FG>
+            <FG label="Kembalian"><div style={{background:"#0f0f18",borderRadius:10,padding:"10px 13px",fontSize:13,fontWeight:800,color:kembalian>=0&&bayar?"#22c55e":"#ef4444",border:"1.5px solid #1f1f2e"}}>{bayar?fmt(Math.max(0,kembalian)):"–"}</div></FG>
+          </div>
+          <button onClick={handleBayar} style={{...BS("#22c55e"),width:"100%",justifyContent:"center",padding:"13px",fontSize:14}}><Icon name="check" size={18} color="#fff"/> Proses Pembayaran</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── STRUK ────────────────────────────────────────────────────────────────────
+function StrukPage({tx,onClose}) {
+  const printBT=async()=>{
+    if(!navigator.bluetooth){alert("Gunakan Chrome di Android/desktop untuk Bluetooth print.");return;}
+    try{
+      const dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:["000018f0-0000-1000-8000-00805f9b34fb"]});
+      const srv=await dev.gatt.connect();
+      const svc=await srv.getPrimaryService("000018f0-0000-1000-8000-00805f9b34fb");
+      const ch=await svc.getCharacteristic("00002af1-0000-1000-8000-00805f9b34fb");
+      const enc=new TextEncoder();
+      const lines=["\x1B\x40","\x1B\x61\x01","RestoKu\n","\x1B\x61\x00",
+        `${fmtTgl(tx.waktu)} ${fmtJam(tx.waktu)} - ${tx.tipe==="takeaway"?"Take Away":"Dine In"}\n`,
+        "--------------------------------\n",
+        ...tx.items.map(i=>`${i.nama}\n  ${i.qty}x${fmt(i.harga)} = ${fmt(i.harga*i.qty)}\n`),
+        "================================\n",
+        `TOTAL   : ${fmt(tx.total)}\nBAYAR   : ${fmt(tx.bayar)}\nKEMBALI : ${fmt(tx.kembalian)}\n`,
+        "================================\n","  Terima kasih!\n\n\n","\x1D\x56\x00"
+      ];
+      for(const l of lines) await ch.writeValue(enc.encode(l));
+      alert("Struk terkirim ke printer!");
+    }catch(e){if(e.name!=="NotFoundError") alert("Gagal: "+e.message);}
+  };
+  return (
+    <div style={{padding:"16px 20px 24px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,padding:"0 0 16px",borderBottom:"1px solid #2a2a3e",marginBottom:16}}>
+        <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer"}}><Icon name="back" size={22} color="#9ca3af"/></button>
+        <div style={{fontSize:16,fontWeight:800,color:"#e2e8f0"}}>Struk Transaksi</div>
+      </div>
+      <div style={{background:"#fff",borderRadius:14,padding:"18px",color:"#111",fontFamily:"'Space Mono',monospace",fontSize:13,marginBottom:14}}>
+        <div style={{textAlign:"center",fontWeight:700,fontSize:15,marginBottom:2}}>RestoKu</div>
+        <div style={{textAlign:"center",fontSize:10,color:"#555",marginBottom:10}}>{fmtTgl(tx.waktu)} · {fmtJam(tx.waktu)} · {tx.tipe==="takeaway"?"Take Away":"Dine In"}</div>
+        <div style={{borderTop:"1px dashed #ccc",borderBottom:"1px dashed #ccc",padding:"7px 0",margin:"0 0 7px"}}>
+          {tx.items.map((item,i)=>(
+            <div key={i} style={{marginBottom:5}}>
+              <div style={{fontSize:11,fontWeight:700}}>{item.nama}</div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#555"}}>
+                <span>{item.qty} × {fmt(item.harga)}</span>
+                <span style={{fontWeight:700,color:"#111"}}>{fmt(item.harga*item.qty)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",fontWeight:700,fontSize:13,margin:"7px 0 3px"}}><span>Total</span><span>{fmt(tx.total)}</span></div>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#555"}}><span>Bayar</span><span>{fmt(tx.bayar)}</span></div>
+        <div style={{display:"flex",justifyContent:"space-between",fontWeight:700,fontSize:12,color:"#15803d"}}><span>Kembalian</span><span>{fmt(tx.kembalian)}</span></div>
+        <div style={{textAlign:"center",fontSize:10,color:"#888",marginTop:10}}>— Terima kasih! —</div>
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        <button onClick={printBT} style={{...BS("#6366f1"),width:"100%",justifyContent:"center",padding:"13px",fontSize:13}}><Icon name="print" size={17} color="#fff"/> Print Thermal Bluetooth</button>
+        <div style={{background:"#1a1a24",borderRadius:10,padding:"10px 13px",fontSize:11,color:"#6b7280",lineHeight:1.6}}>💡 Perlu Chrome · Android/Desktop · Printer ESC/POS Bluetooth (Epson, XPrinter, GOOJPRT, dll)</div>
+        <button onClick={onClose} style={{...BS("#2a2a3e"),width:"100%",justifyContent:"center",padding:"11px",fontSize:12}}>Kembali ke Kasir</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── LAPORAN ──────────────────────────────────────────────────────────────────
+function LaporanPage({transaksi,produk,paket}) {
+  const [periode,setPeriode]=useState("harian");
+  const [tgl,setTgl]=useState(new Date().toISOString().slice(0,10));
+  const [bulan,setBulan]=useState(new Date().toISOString().slice(0,7));
+
+  const filtered=transaksi.filter(t=>{
+    if(periode==="harian") return t.waktu.slice(0,10)===tgl;
+    if(periode==="mingguan"){const b=new Date(tgl);b.setDate(b.getDate()-b.getDay());const e=new Date(b);e.setDate(e.getDate()+6);const d=new Date(t.waktu);return d>=b&&d<=e;}
+    return t.waktu.slice(0,7)===bulan;
+  });
+
+  const totalPendapatan=filtered.reduce((a,t)=>a+t.total,0);
+  const menuCount={};
+  filtered.forEach(t=>t.items.forEach(i=>{menuCount[i.nama]=(menuCount[i.nama]||0)+i.qty;}));
+  const terlaris=Object.entries(menuCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const perHari={};
+  filtered.forEach(t=>{const d=t.waktu.slice(0,10);perHari[d]=(perHari[d]||0)+t.total;});
+  const hariEntries=Object.entries(perHari).sort(([a],[b])=>a>b?1:-1);
+  const maxHari=Math.max(...Object.values(perHari),1);
+
+  return (
+    <div style={{padding:"16px 20px"}}>
+      <div style={{display:"flex",gap:6,marginBottom:14}}>
+        {[["harian","Harian"],["mingguan","Mingguan"],["bulanan","Bulanan"]].map(([v,l])=>(
+          <button key={v} onClick={()=>setPeriode(v)} style={{flex:1,padding:"7px 4px",borderRadius:9,border:"1.5px solid",borderColor:periode===v?"#6366f1":"#2a2a3e",background:periode===v?"#1e1b4b":"#1a1a24",color:periode===v?"#a5b4fc":"#6b7280",fontSize:11,fontWeight:700,cursor:"pointer"}}>{l}</button>
+        ))}
+      </div>
+      <div style={{marginBottom:14}}>
+        {(periode==="harian"||periode==="mingguan")&&<input type="date" value={tgl} onChange={e=>setTgl(e.target.value)} style={IS}/>}
+        {periode==="bulanan"&&<input type="month" value={bulan} onChange={e=>setBulan(e.target.value)} style={IS}/>}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:18}}>
+        <Card bg="linear-gradient(135deg,#6366f1,#8b5cf6)">
+          <div style={{fontSize:10,color:"rgba(255,255,255,.7)",fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Total Pendapatan</div>
+          <div style={{fontSize:20,fontWeight:900,color:"#fff",marginTop:4}}>{fmt(totalPendapatan)}</div>
+          <div style={{fontSize:11,color:"rgba(255,255,255,.6)",marginTop:2}}>{filtered.length} transaksi</div>
+        </Card>
+        <Card bg="linear-gradient(135deg,#0f766e,#0d9488)">
+          <div style={{fontSize:10,color:"rgba(255,255,255,.7)",fontWeight:700,letterSpacing:1,textTransform:"uppercase"}}>Rata-rata / Transaksi</div>
+          <div style={{fontSize:20,fontWeight:900,color:"#fff",marginTop:4}}>{fmt(filtered.length>0?Math.round(totalPendapatan/filtered.length):0)}</div>
+          <div style={{fontSize:11,color:"rgba(255,255,255,.6)",marginTop:2}}>{terlaris.length>0?`Top: ${terlaris[0][0]}`:"—"}</div>
+        </Card>
+      </div>
+
+      {hariEntries.length>1&&(
+        <>
+          <ST>📈 Grafik Pendapatan</ST>
+          <div style={{background:"#1a1a24",borderRadius:13,padding:"13px 14px",marginBottom:18}}>
+            <div style={{display:"flex",alignItems:"flex-end",gap:4,height:72}}>
+              {hariEntries.map(([d,v])=>(
+                <div key={d} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+                  <div style={{width:"100%",background:"#6366f1",borderRadius:"3px 3px 0 0",height:`${Math.round((v/maxHari)*62)+4}px`,minHeight:3,opacity:0.8}}/>
+                  <div style={{fontSize:8,color:"#4b5563",textAlign:"center"}}>{d.slice(5)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      <ST>🏆 Menu Terlaris</ST>
+      {terlaris.length===0?<Empty t="Tidak ada transaksi di periode ini"/>:terlaris.map(([nama,qty],i)=>{
+        const tot=filtered.filter(t=>t.items.some(x=>x.nama===nama)).reduce((a,t)=>a+t.items.filter(x=>x.nama===nama).reduce((s,x)=>s+x.harga*x.qty,0),0);
+        return (
+          <div key={nama} style={{background:"#1a1a24",borderRadius:12,padding:"10px 14px",marginBottom:7,display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:26,height:26,background:["#f59e0b","#94a3b8","#cd7c2f","#4b5563","#4b5563"][i],borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:"#fff",fontFamily:"'Space Mono'"}}>{i+1}</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13,fontWeight:700,color:"#e2e8f0"}}>{nama}</div>
+              <div style={{fontSize:10,color:"#6b7280"}}>{qty} terjual</div>
+            </div>
+            <div style={{fontSize:12,fontWeight:800,color:"#22c55e",fontFamily:"'Space Mono'"}}>{fmt(tot)}</div>
+          </div>
+        );
+      })}
+
+      <ST mt={14}>🧾 Riwayat Transaksi</ST>
+      {filtered.length===0?<Empty t="Tidak ada transaksi"/>:filtered.map(t=>(
+        <div key={t.id} style={{background:"#1a1a24",borderRadius:12,padding:"9px 14px",marginBottom:7}}>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:11,color:"#6b7280",fontFamily:"'Space Mono'"}}>{fmtJam(t.waktu)}</span>
+              <span style={{fontSize:9,background:t.tipe==="takeaway"?"#1a1400":"#0f1a2e",color:t.tipe==="takeaway"?"#fbbf24":"#60a5fa",padding:"1px 5px",borderRadius:7,fontWeight:700}}>{t.tipe==="takeaway"?"Take Away":"Dine In"}</span>
+            </div>
+            <span style={{fontSize:13,fontWeight:800,color:"#22c55e"}}>{fmt(t.total)}</span>
+          </div>
+          <div style={{fontSize:11,color:"#9ca3af"}}>{t.items.map(i=>`${i.nama}×${i.qty}`).join(", ")}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   </script>
   <script>
     if('serviceWorker' in navigator){
-      const ok=!location.hostname.includes('claudeusercontent.com')&&location.hostname!=='localhost'&&!location.hostname.includes('127.0.0.1');
-      if(ok) window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').then(()=>console.log('[RestoKu] Offline ✓')).catch(e=>console.warn('[RestoKu]',e.message)));
-      else console.log('[RestoKu] Preview mode — SW skip');
+      const ok=!location.hostname.includes('claudeusercontent.com')&&location.hostname!=='localhost';
+      if(ok) window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').then(()=>console.log('[RestoKu] Offline ✓')).catch(e=>console.warn(e.message)));
+      else console.log('[RestoKu] Preview — SW skip');
     }
   </script>
 </body>
